@@ -24,7 +24,7 @@ def parse_args():
         "--data_file",
         help="path to the newly created dataset directory",
         type=str,
-        default="C:\\Users\\aavia\\PycharmProjects\\HaddasahRH\\data\\social_assessments_only_first_100_en.tsv"
+        default="C:\Users\aavia\PycharmProjects\HaddasahRH\data\social_assesments_100_annotations_en.tsv"
     )
 
     parser.add_argument(

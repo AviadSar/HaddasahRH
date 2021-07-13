@@ -273,7 +273,7 @@ def remove_random_sentence(series):
     return series
 
 
-def get_manipulation_func_from_args(args):
+def get_processing_func_from_args(args):
     func_name = args.manipulation_func
     func_args = args.manipulation_func_args
 
