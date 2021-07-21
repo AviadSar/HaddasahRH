@@ -4,6 +4,60 @@ from transformers import RobertaTokenizerFast
 from tokenizers import AddedToken
 from data_loader import read_data_from_csv
 from trainer import parse_args
+import pandas as pd
+
+
+def less_than_n_tokens(data, n):
+    tokenizer = RobertaTokenizerFast.from_pretrained('roberta-base')
+    tokenizer.add_special_tokens(
+        {"additional_special_tokens": [AddedToken('<skip>', lstrip=True), AddedToken('<no_skip>', lstrip=True)]})
+
+    # splits_ratio = [1, 1, 0]
+    splits_ratio = [1]
+    splits = []
+    for split, ratio in zip([data], splits_ratio):
+        text = split['social_assesment'].tolist()[:int(len(split['social_assesment']) * ratio)]
+        n_samples = len(text)
+        if n_samples == 0:
+            continue
+
+        batch_size = 10000
+        batch_idx = 0
+        while batch_idx * batch_size < n_samples:
+            batch_text = text[batch_idx * batch_size: min((batch_idx + 1) * batch_size, n_samples)]
+
+            encoded_texts = tokenizer(batch_text, return_attention_mask=False, truncation=False, padding=False)['input_ids']
+            greater_than_n_indices = []
+            for text_idx, encoded_text in enumerate(encoded_texts):
+                text_length = len(encoded_text)
+                if text_length > n:
+                    greater_than_n_indices.append(text_idx)
+            split = split.drop(greater_than_n_indices, axis=0)
+
+            # encoded_texts = tokenizer(split['social_assesment'].tolist(), return_attention_mask=False, truncation=False, padding=False)[
+            #     'input_ids']
+            # greater_than_n_indices = []
+            # for text_idx, encoded_text in enumerate(encoded_texts):
+            #     text_length = len(encoded_text)
+            #     if text_length > n:
+            #         greater_than_n_indices.append(text_idx)
+            #
+            # split = split.drop(greater_than_n_indices, axis=0)
+            #
+            # encoded_texts = \
+            # tokenizer(split['social_assesment'].tolist(), return_attention_mask=False, truncation=False, padding=False)[
+            #     'input_ids']
+            # greater_than_n_indices = []
+            # for text_idx, encoded_text in enumerate(encoded_texts):
+            #     text_length = len(encoded_text)
+            #     if text_length > n:
+            #         greater_than_n_indices.append(text_idx)
+
+            print('batch ' + str(batch_idx) + ' done.')
+            batch_idx += 1
+
+        splits.append(split)
+        return splits
 
 
 def data_tokens_histograms(data):
@@ -11,10 +65,12 @@ def data_tokens_histograms(data):
     tokenizer.add_special_tokens(
         {"additional_special_tokens": [AddedToken('<skip>', lstrip=True), AddedToken('<no_skip>', lstrip=True)]})
 
-    splits_ratio = [1, 1, 0]
-    for split, ratio in zip(data, splits_ratio):
+    # splits_ratio = [1, 1, 0]
+    splits_ratio = [1]
+    for split, ratio in zip([data], splits_ratio):
         histogram = {}
-        text = split['text'].tolist()[:int(len(split['text']) * ratio)]
+        text = split['social_assesment'].tolist()[:int(len(split['social_assesment']) * ratio)]
+        print('number of samples: ' + str(len(text)))
         n_samples = len(text)
         if n_samples == 0:
             continue
@@ -73,5 +129,10 @@ def data_histograms(data):
 
 if __name__ == '__main__':
     args = parse_args()
-    data = read_data_from_csv("C:\\my_documents\\AMNLPFinal\\datasets\\missing_middle_5_sentences_out_of_11\\text_target")
+    data = pd.read_csv("data/social_assesments_100_annotations_en.tsv", sep='\t')
+    print('number of nan entries id: ' + str(len(data[data['social_assesment'].isna()])))
+    data = data[~data['social_assesment'].isna()]
+    # data_tokens_histograms(data)
+    data = less_than_n_tokens(data, 500)[0]
     data_tokens_histograms(data)
+    a = 1
