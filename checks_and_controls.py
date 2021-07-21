@@ -34,25 +34,6 @@ def less_than_n_tokens(data, n):
                     greater_than_n_indices.append(text_idx)
             split = split.drop(greater_than_n_indices, axis=0)
 
-            # encoded_texts = tokenizer(split['social_assesment'].tolist(), return_attention_mask=False, truncation=False, padding=False)[
-            #     'input_ids']
-            # greater_than_n_indices = []
-            # for text_idx, encoded_text in enumerate(encoded_texts):
-            #     text_length = len(encoded_text)
-            #     if text_length > n:
-            #         greater_than_n_indices.append(text_idx)
-            #
-            # split = split.drop(greater_than_n_indices, axis=0)
-            #
-            # encoded_texts = \
-            # tokenizer(split['social_assesment'].tolist(), return_attention_mask=False, truncation=False, padding=False)[
-            #     'input_ids']
-            # greater_than_n_indices = []
-            # for text_idx, encoded_text in enumerate(encoded_texts):
-            #     text_length = len(encoded_text)
-            #     if text_length > n:
-            #         greater_than_n_indices.append(text_idx)
-
             print('batch ' + str(batch_idx) + ' done.')
             batch_idx += 1
 
@@ -131,8 +112,6 @@ if __name__ == '__main__':
     args = parse_args()
     data = pd.read_csv("data/social_assesments_100_annotations_en.tsv", sep='\t')
     print('number of nan entries id: ' + str(len(data[data['social_assesment'].isna()])))
-    data = data[~data['social_assesment'].isna()]
-    # data_tokens_histograms(data)
+    data = data[~data['social_assesment'].isna()].reset_index()
     data = less_than_n_tokens(data, 500)[0]
     data_tokens_histograms(data)
-    a = 1
