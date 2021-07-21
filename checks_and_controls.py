@@ -113,5 +113,6 @@ if __name__ == '__main__':
     data = pd.read_csv("data/social_assesments_100_annotations_en.tsv", sep='\t')
     print('number of nan entries id: ' + str(len(data[data['social_assesment'].isna()])))
     data = data[~data['social_assesment'].isna()].reset_index()
-    data = less_than_n_tokens(data, 500)[0]
+    data = less_than_n_tokens(data, 500)[0].reset_index().drop('level_0', axis=1).drop('index', axis=1)
     data_tokens_histograms(data)
+    data.to_csv("data/social_assesments_100_annotations_clean_en.tsv", sep='\t')
