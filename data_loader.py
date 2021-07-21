@@ -20,40 +20,7 @@ def parse_args():
         default=None
     )
 
-    parser.add_argument(
-        "--data_file",
-        help="path to the newly created dataset directory",
-        type=str,
-        default="C:\\Users\\aavia\\PycharmProjects\\HaddasahRH\\data\\social_assesments_100_annotations_en.tsv"
-    )
 
-    parser.add_argument(
-        "--processed_data_dir",
-        help="path to the newly created dataset directory",
-        type=str,
-        default="C:\\my_documents\\datasets\\AMNLPFinal\\miss_last_sentence_5_sentences_"
-    )
-
-    parser.add_argument(
-        '--n_train_samples',
-        help='continue or start training from this epoch',
-        type=int,
-        default=50,
-    )
-
-    parser.add_argument(
-        '--n_dev_samples',
-        help='continue or start training from this epoch',
-        type=int,
-        default=50,
-    )
-
-    parser.add_argument(
-        '--processing_func',
-        help='the function used to adjust the newly created dataset',
-        type=str,
-        default=None
-    )
 
     args = parser.parse_args()
     if args.json_file:
@@ -85,18 +52,12 @@ def load_data(args):
     n_train_samples = args.n_train_samples
     n_dev_samples = args.n_dev_samples
 
-    data = args.processing_func(data)
+    processing_func = get_processing_func_from_args(args)
+    if processing_func:
+        data = processing_func(data)
 
     train = data[:n_train_samples]
     dev = data[n_train_samples: n_train_samples + n_dev_samples]
     data = data[:n_train_samples].append(data[n_train_samples + n_dev_samples:])
 
     return [train, dev, data]
-
-
-if __name__ == '__main__':
-    args = parse_args()
-    args.processing_func = get_processing_func_from_args(args)
-
-    np.random.seed(42)
-    load_data(args)

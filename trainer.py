@@ -12,6 +12,7 @@ import data_loader
 import dataset_classes
 from datasets import load_metric
 from logger import Logger, log_from_log_history
+from data_loader import load_data
 
 accuracy_metric = load_metric("accuracy")
 
@@ -27,10 +28,31 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--data_dir",
-        help="path to dataset directory",
+        "--data_file",
+        help="path to the newly created dataset directory",
         type=str,
-        default="C:\\my_documents\\datasets\\AMNLPFinal\\miss_last_paragraph_3_paragraphs"
+        default="C:\\Users\\aavia\\PycharmProjects\\HaddasahRH\\data\\social_assesments_100_annotations_en.tsv"
+    )
+
+    parser.add_argument(
+        '--n_train_samples',
+        help='continue or start training from this epoch',
+        type=int,
+        default=50,
+    )
+
+    parser.add_argument(
+        '--n_dev_samples',
+        help='continue or start training from this epoch',
+        type=int,
+        default=50,
+    )
+
+    parser.add_argument(
+        '--processing_func',
+        help='the function used to adjust the newly created dataset',
+        type=str,
+        default=None
     )
 
     parser.add_argument(
@@ -157,7 +179,7 @@ def load_and_tokenize_dataset(args, tokenizer):
     return dataset
 
 
-def set_trainer(args):
+def set_trainer(data, args):
     tokenizer = RobertaTokenizerFast.from_pretrained(args.model_name)
     tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken('<skip>', lstrip=True), AddedToken('<no_skip>', lstrip=True)]})
     model = get_model_from_args(args)
@@ -186,6 +208,7 @@ def set_trainer(args):
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size * 4,
         gradient_accumulation_steps=128 // args.batch_size,
+        eval_accumulation_steps=args.batch_size * 3,
         warmup_steps=500,
         weight_decay=0.01,
         save_strategy='no',
@@ -211,37 +234,14 @@ def set_trainer(args):
     return trainer
 
 
-def train_and_eval(trainer, args):
-    """
-    my training loop. currently not used due to switch to huggingface's loop. keeping it here for future reference
-    """
-    start_epoch, end_epoch, model_dir = args.start_epoch, args.end_epoch, args.model_dir
-    logger = Logger(args, start_epoch)
-    best_eval_accuracy = logger.best_eval_accuracy
-    for epoch in range(start_epoch, end_epoch):
-        if epoch == 0:
-            trainer.train()
-        else:
-            trainer.train(model_dir)
-
-        eval = trainer.evaluate()
-        eval_accuracy = eval['eval_accuracy']
-        if eval_accuracy > best_eval_accuracy:
-            best_eval_accuracy = eval_accuracy
-            trainer.save_model(model_dir + os.path.sep + 'best_model')
-            trainer.save_state()
-            print("saved epoch: " + str(epoch + 1))
-        trainer.save_model(model_dir)
-        trainer.save_state()
-        logger.update(trainer.state.log_history[-2]['train_loss'], eval['eval_loss'], eval_accuracy)
-        print("epoch: " + str(epoch + 1))
-        print("eval loss: " + str(eval['eval_loss']))
-        print("eval accuracy: " + str(eval_accuracy))
+def soft_label_data(args):
+    train, dev, data = load_data(args)
 
 
 if __name__ == "__main__":
     args = parse_args()
-    trainer = set_trainer(args)
+    data = soft_label_data(args)
+    trainer = set_trainer(data, args)
 
     try:
         trainer.train(resume_from_checkpoint=True)
