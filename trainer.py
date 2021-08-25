@@ -4,6 +4,8 @@ import os
 import sklearn
 import pandas as pd
 import argparse
+
+import patterns
 from args_classes import Args
 from transformers import RobertaTokenizerFast, RobertaForMaskedLM, RobertaForSequenceClassification, Trainer, TrainingArguments,\
     TrainerCallback, RobertaConfig
@@ -106,8 +108,8 @@ def encode_targets(batch_target, tokenizer, args):
 def tokenize_datasets(tokenizer, datasets, args):
     tokenized_datasets = []
     for dataset in datasets:
-        text = dataset['social_assesment'].tolist()
-        target = dataset[args.target_column].tolist()
+        text = dataset['text'].tolist()
+        target = dataset['target'].tolist()
 
         tokenized_datasets.append(
             {
@@ -156,10 +158,10 @@ def set_trainer(model, tokenizer, train, eval, args):
     return trainer
 
 
-def apply_pattern(pattern, verbalizer, datasets):
+def apply_pattern_to_all_datasets(pattern, verbalizer, datasets, args):
     new_datasets = []
     for dataset in datasets:
-        new_datasets.append(pattern(verbalizer, dataset))
+        new_datasets.append(patterns.apply_pattern(pattern, verbalizer, dataset, args))
     return new_datasets
 
 
@@ -176,7 +178,7 @@ def soft_label_data(args):
 
     pattern_logits = []
     for pattern, verbalizer in zip(args.patterns, args.verbalizers):
-        curr_train, curr_dev, curr_test, curr_data = apply_pattern(pattern, verbalizer, (train, dev, test, data))
+        curr_train, curr_dev, curr_test, curr_data = apply_pattern_to_all_datasets(pattern, verbalizer, (train, dev, test, data), args)
         tokenized_train, tokenized_dev, tokenized_test, tokenized_data = tokenize_datasets(tokenizer, (curr_train, curr_dev, curr_test, curr_data), args)
         trainer = set_trainer(model, tokenizer, tokenized_train, tokenized_dev, args)
         trainer.train()

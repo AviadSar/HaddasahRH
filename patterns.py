@@ -273,7 +273,13 @@ def remove_random_sentence(series):
     return series
 
 
-def
+def marital_status_pattern_1(text):
+    pass
+
+
+def apply_pattern(pattern, verbalizer, dataset, args):
+    dataset['text'] = dataset['social_assessment'].apply(pattern)
+    dataset['target'] = dataset.apply(verbalizer(args), axis=1)
 
 
 def get_pattern_from_string(pattern_string, args):
