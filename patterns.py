@@ -273,7 +273,10 @@ def remove_random_sentence(series):
     return series
 
 
-def get_processing_func_from_args(args):
+def
+
+
+def get_pattern_from_string(pattern_string, args):
     func_name = args.manipulation_func
     func_args = args.manipulation_func_args
 
@@ -302,3 +305,16 @@ def get_processing_func_from_args(args):
     elif func_name == 'remove_random_sentence':
         return remove_random_sentence
     return None
+
+
+def get_patterns_from_args(args):
+    if args.patterns is None:
+        return None
+    patterns = []
+    for pattern_string in args.patterns:
+        pattern = get_pattern_from_string(pattern_string, args)
+        if pattern is None:
+            return None
+        else:
+            patterns.append(pattern)
+    return patterns

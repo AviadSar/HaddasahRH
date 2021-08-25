@@ -4,9 +4,9 @@ import os
 import sklearn
 import pandas as pd
 import argparse
-from args_classes import TrainerArgs
-from transformers import RobertaTokenizerFast, RobertaForSequenceClassification, RobertaForTokenClassification,\
-    Trainer, TrainingArguments, TrainerCallback, RobertaConfig
+from args_classes import Args
+from transformers import RobertaTokenizerFast, RobertaForMaskedLM, RobertaForSequenceClassification, Trainer, TrainingArguments,\
+    TrainerCallback, RobertaConfig
 from tokenizers import AddedToken
 import data_loader
 import dataset_classes
@@ -15,6 +15,19 @@ from logger import Logger, log_from_log_history
 from data_loader import load_data
 
 accuracy_metric = load_metric("accuracy")
+
+
+class EvaluateAndSaveCallback(TrainerCallback):
+    def on_step_end(self, callback_args, state, control, logs=None, **kwargs):
+        if state.global_step % callback_args.eval_steps == 0:
+            control.should_evaluate = True
+            control.should_save = True
+
+
+class LoggingCallback(TrainerCallback):
+    def on_step_end(self, callback_args, state, control, logs=None, **kwargs):
+        if state.global_step % callback_args.logging_steps == 0:
+            control.should_log = True
 
 
 def parse_args():
@@ -27,92 +40,30 @@ def parse_args():
         default=None
     )
 
-    parser.add_argument(
-        "--data_file",
-        help="path to the newly created dataset directory",
-        type=str,
-        default="C:\\Users\\aavia\\PycharmProjects\\HaddasahRH\\data\\social_assesments_100_annotations_en.tsv"
-    )
-
-    parser.add_argument(
-        '--n_train_samples',
-        help='continue or start training from this epoch',
-        type=int,
-        default=50,
-    )
-
-    parser.add_argument(
-        '--n_dev_samples',
-        help='continue or start training from this epoch',
-        type=int,
-        default=50,
-    )
-
-    parser.add_argument(
-        '--processing_func',
-        help='the function used to adjust the newly created dataset',
-        type=str,
-        default=None
-    )
-
-    parser.add_argument(
-        "--model_dir",
-        help="path to model directory",
-        type=str,
-        default="C:\\my_documents\\models\\roberta_miss_last_paragraph_3_paragraphs"
-    )
-
-    parser.add_argument(
-        "--model_name",
-        help="name of the model to load from the web",
-        type=str,
-        default="roberta-base"
-    )
-
-    parser.add_argument(
-        '--model_type',
-        help='the type of model (head), e.g., sequence classification, token classification, etc.',
-        type=str,
-        default="classification",
-    )
-
-    parser.add_argument(
-        '--start_epoch',
-        help='continue or start training from this epoch',
-        type=int,
-        default=0,
-    )
-
-    parser.add_argument(
-        '--end_epoch',
-        help='end training on this epoch',
-        type=int,
-        default=50,
-    )
-
-    parser.add_argument(
-        '--batch_size',
-        help='number of samples in each batch of training/evaluating',
-        type=int,
-        default=4,
-    )
-
     args = parser.parse_args()
     if args.json_file:
-        args = TrainerArgs(args.json_file)
+        args = Args(args.json_file)
     return args
 
 
-def get_model_from_args(args):
+def get_model_and_tokenizer(args, type):
+    model, tokenizer = None, None
     if 'roberta' in args.model_name:
-        if args.model_type == 'sequence_classification':
-            return RobertaForSequenceClassification.from_pretrained(args.model_name,
-                                                                    hidden_dropout_prob=args.dropout,
-                                                                    attention_probs_dropout_prob=args.dropout)
-        elif args.model_type == 'token_classification':
-            return RobertaForTokenClassification.from_pretrained(args.model_name,
-                                                                 hidden_dropout_prob=args.dropout,
-                                                                 attention_probs_dropout_prob=args.dropout)
+        tokenizer = RobertaTokenizerFast.from_pretrained(args.model_name)
+        if type == 'sequence_classification':
+            model = RobertaForSequenceClassification.from_pretrained(args.model_name,
+                                                                     hidden_dropout_prob=args.dropout,
+                                                                     attention_probs_dropout_prob=args.dropout,
+                                                                     num_labels=args.num_labels)
+        elif type == 'masked_LM':
+            model = RobertaForMaskedLM.from_pretrained(args.model_name,
+                                                                  hidden_dropout_prob=args.dropout,
+                                                                  attention_probs_dropout_prob=args.dropout)
+    if args.eval:
+        model = model.from_pretrained(args.model_dir)
+    if model and tokenizer:
+        model.resize_token_embeddings(len(tokenizer))
+        return model, tokenizer
     raise Exception('no such model: name "{}", type "{}"'.format(args.model_name, args.model_type))
 
 
@@ -152,56 +103,28 @@ def encode_targets(batch_target, tokenizer, args):
         return encode_targets_for_token_classification(batch_target, tokenizer)
 
 
-def load_and_tokenize_dataset(args, tokenizer):
-    data = data_loader.read_data_from_csv(args.data_dir)
-    # the ratio of train/dev/test sets where 1 is the full size of each the set
-    splits_ratio = args.data_split_ratio
+def tokenize_datasets(tokenizer, datasets, args):
+    tokenized_datasets = []
+    for dataset in datasets:
+        text = dataset['social_assesment'].tolist()
+        target = dataset[args.target_column].tolist()
 
-    tokenized_data = []
-    for split, ratio in zip(data, splits_ratio):
-        if ratio == 0:
-            continue
-        text = split['text'].tolist()[:int(len(split) * ratio)]
-        target = split['target'].tolist()[:int(len(split) * ratio)]
-
-        tokenized_data.append(
+        tokenized_datasets.append(
             {
-                'encoded_text': tokenizer(text, return_attention_mask=False,
+                'encoded_text': tokenizer(text, max_length=512, return_attention_mask=True,
                                           truncation=True, padding='max_length'),
                 'encoded_target': encode_targets(target, tokenizer, args)
             }
         )
 
-    dataset = []
-    for split in tokenized_data:
-        dataset.append(dataset_classes.TextDataset(split['encoded_text'], split['encoded_target']))
+    datasets = []
+    for dataset in tokenized_datasets:
+        datasets.append(dataset_classes.TextDataset(dataset['encoded_text'], dataset['encoded_target']))
 
     return dataset
 
 
-def set_trainer(data, args):
-    tokenizer = RobertaTokenizerFast.from_pretrained(args.model_name)
-    tokenizer.add_special_tokens({"additional_special_tokens": [AddedToken('<skip>', lstrip=True), AddedToken('<no_skip>', lstrip=True)]})
-    model = get_model_from_args(args)
-    model.resize_token_embeddings(len(tokenizer))
-
-    dataset = load_and_tokenize_dataset(args, tokenizer)
-
-    class StopEachEpochCallback(TrainerCallback):
-        def on_epoch_end(self, args, state, control, logs=None, **kwargs):
-            control.should_training_stop = True
-
-    class EvaluateAndSaveCallback(TrainerCallback):
-        def on_step_end(self, args, state, control, logs=None, **kwargs):
-            if state.global_step % args.eval_steps == 0:
-                control.should_evaluate = True
-                control.should_save = True
-
-    class LoggingCallback(TrainerCallback):
-        def on_step_end(self, callback_args, state, control, logs=None, **kwargs):
-            if state.global_step % args.logging_steps == 0:
-                control.should_log = True
-
+def set_trainer(model, tokenizer, train, eval, args):
     training_args = TrainingArguments(
         output_dir=args.model_dir,
         max_steps=args.eval_steps * args.num_evals,
@@ -221,12 +144,11 @@ def set_trainer(data, args):
         greater_is_better=True
     )
 
-
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=dataset[0],
-        eval_dataset=dataset[1],
+        train_dataset=train,
+        eval_dataset=eval,
         callbacks=[EvaluateAndSaveCallback(), LoggingCallback()],
         compute_metrics=compute_metrics(args)
     )
@@ -234,14 +156,47 @@ def set_trainer(data, args):
     return trainer
 
 
+def apply_pattern(pattern, verbalizer, datasets):
+    new_datasets = []
+    for dataset in datasets:
+        new_datasets.append(pattern(verbalizer, dataset))
+    return new_datasets
+
+
+def adjust_target_column(datasets, args):
+    for dataset in datasets:
+        for label_replacement in args.label_dictionary:
+            dataset[args.target_column] = dataset[args.target_column].replace(label_replacement[0], label_replacement[1])
+
+
 def soft_label_data(args):
-    train, dev, data = load_data(args)
+    model, tokenizer = get_model_and_tokenizer(args, 'masked_LM')
+    train, dev, test, data = load_data(args)
+    adjust_target_column((train, dev, test, data), args)
+
+    pattern_logits = []
+    for pattern, verbalizer in zip(args.patterns, args.verbalizers):
+        curr_train, curr_dev, curr_test, curr_data = apply_pattern(pattern, verbalizer, (train, dev, test, data))
+        tokenized_train, tokenized_dev, tokenized_test, tokenized_data = tokenize_datasets(tokenizer, (curr_train, curr_dev, curr_test, curr_data), args)
+        trainer = set_trainer(model, tokenizer, tokenized_train, tokenized_dev, args)
+        trainer.train()
+
+        trainer.eval_dataset = tokenized_data
+        evaluation = trainer.evaluate()
+
+        pattern_logits.append(get_pattern_logits())
+
+    logits = np.mean(np.array(pattern_logits), axis=0)
+    classifier_data = add_logits_targets(tokenized_data)
+
+    return classifier_data, tokenized_test
 
 
 if __name__ == "__main__":
     args = parse_args()
-    data = soft_label_data(args)
-    trainer = set_trainer(data, args)
+    train, test = soft_label_data(args)
+    model, tokenizer = get_model_and_tokenizer(args, 'sequence_classification')
+    trainer = set_trainer(model, tokenizer, train, test, args)
 
     try:
         trainer.train(resume_from_checkpoint=True)
