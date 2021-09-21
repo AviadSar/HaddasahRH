@@ -4,6 +4,10 @@ import os
 import sklearn
 import pandas as pd
 import argparse
+from scipy.special import softmax
+
+from patterns import get_patterns_from_args
+from verbalizers import get_verbalizers_from_args
 
 import patterns
 from args_classes import Args
@@ -61,7 +65,7 @@ def get_model_and_tokenizer(args, type):
             model = RobertaForMaskedLM.from_pretrained(args.model_name,
                                                                   hidden_dropout_prob=args.dropout,
                                                                   attention_probs_dropout_prob=args.dropout)
-    if args.eval:
+    if model and args.eval:
         model = model.from_pretrained(args.model_dir)
     if model and tokenizer:
         model.resize_token_embeddings(len(tokenizer))
@@ -81,15 +85,28 @@ def compute_sequence_accuracy(eval_pred):
     return accuracy_metric.compute(predictions=predictions, references=labels)
 
 
+def compute_MLM_accuracy(eval_pred):
+    logits, labels = eval_pred
+    predictions = np.argmax(logits, axis=-1)
+    metric_dict = accuracy_metric.compute(predictions=predictions[labels != -100], references=labels[labels != -100])
+
+    mask_positions = np.where(labels != -100)
+    metric_dict.update({'mask_logits': logits[mask_positions]})
+
+    return metric_dict
+
+
 def compute_metrics(args):
     if args.model_type == 'token_classification':
         return compute_token_accuracy
     elif args.model_type == 'sequence_classification':
         return compute_sequence_accuracy
+    elif args.model_type == 'MLM':
+        return compute_MLM_accuracy
 
 
-def encode_targets_for_token_classification(batch_target, tokenizer):
-    encoded_targets_list = tokenizer(batch_target, return_attention_mask=False, truncation=True, padding='max_length')['input_ids']
+def encode_targets_for_token_classification(target, tokenizer):
+    encoded_targets_list = tokenizer(target, return_attention_mask=False, truncation=True, padding='max_length')['input_ids']
     encoded_targets = np.array(encoded_targets_list)
     encoded_targets[np.logical_and(encoded_targets != (len(tokenizer) - 2), encoded_targets != (len(tokenizer) - 1))] = -100
     encoded_targets[encoded_targets == (len(tokenizer) - 2)] = 0
@@ -98,11 +115,20 @@ def encode_targets_for_token_classification(batch_target, tokenizer):
     return encoded_targets.tolist()
 
 
-def encode_targets(batch_target, tokenizer, args):
+def encode_targets_for_MLM(encoded_text, target, tokenizer):
+    encoded_targets_list = tokenizer(target, return_attention_mask=False, truncation=True, padding='max_length')['input_ids']
+    encoded_targets = np.array(encoded_targets_list)
+    encoded_targets[np.array(encoded_text['input_ids']) != tokenizer.mask_token_id] = -100
+    return encoded_targets.tolist()
+
+
+def encode_targets(encoded_text, target, tokenizer, args):
     if args.model_type == 'sequence_classification':
-        return batch_target
+        return target
     elif args.model_type == 'token_classification':
-        return encode_targets_for_token_classification(batch_target, tokenizer)
+        return encode_targets_for_token_classification(target, tokenizer)
+    elif args.model_type == 'MLM':
+        return encode_targets_for_MLM(encoded_text, target, tokenizer)
 
 
 def tokenize_datasets(tokenizer, datasets, args):
@@ -111,19 +137,15 @@ def tokenize_datasets(tokenizer, datasets, args):
         text = dataset['text'].tolist()
         target = dataset['target'].tolist()
 
-        tokenized_datasets.append(
-            {
-                'encoded_text': tokenizer(text, max_length=512, return_attention_mask=True,
-                                          truncation=True, padding='max_length'),
-                'encoded_target': encode_targets(target, tokenizer, args)
-            }
-        )
+        encoded_text = tokenizer(text, max_length=512, return_attention_mask=True, truncation=True, padding='max_length')
+        encoded_target = encode_targets(encoded_text, target, tokenizer, args)
+        tokenized_datasets.append({'encoded_text': encoded_text, 'encoded_target': encoded_target})
 
     datasets = []
     for dataset in tokenized_datasets:
         datasets.append(dataset_classes.TextDataset(dataset['encoded_text'], dataset['encoded_target']))
 
-    return dataset
+    return datasets
 
 
 def set_trainer(model, tokenizer, train, eval, args):
@@ -131,9 +153,9 @@ def set_trainer(model, tokenizer, train, eval, args):
         output_dir=args.model_dir,
         max_steps=args.eval_steps * args.num_evals,
         per_device_train_batch_size=args.batch_size,
-        per_device_eval_batch_size=args.batch_size * 4,
+        per_device_eval_batch_size=args.batch_size,
         gradient_accumulation_steps=128 // args.batch_size,
-        eval_accumulation_steps=args.batch_size * 3,
+        eval_accumulation_steps=args.batch_size,
         warmup_steps=500,
         weight_decay=0.01,
         save_strategy='no',
@@ -159,10 +181,8 @@ def set_trainer(model, tokenizer, train, eval, args):
 
 
 def apply_pattern_to_all_datasets(pattern, verbalizer, datasets, args):
-    new_datasets = []
     for dataset in datasets:
-        new_datasets.append(patterns.apply_pattern(pattern, verbalizer, dataset, args))
-    return new_datasets
+        patterns.apply_pattern(pattern, verbalizer, dataset, args)
 
 
 def adjust_target_column(datasets, args):
@@ -171,32 +191,47 @@ def adjust_target_column(datasets, args):
             dataset[args.target_column] = dataset[args.target_column].replace(label_replacement[0], label_replacement[1])
 
 
+def get_pattern_probs(evaluation, verbalizer, tokenizer, args):
+    class_token_idxs = [tokenizer.encode(verbalizer.classes[target_class])[1] for target_class in sorted(verbalizer.classes)]
+    pattern_probs = softmax(evaluation['eval_mask_logits'][:, class_token_idxs], axis=1)
+    # pattern_logits_dict = {}
+    # for target_class in verbalizer.classes.items():
+    #     class_token_idx = tokenizer.encode(target_class[1])[1]
+    #     pattern_logits_dict[target_class[0]] = evaluation['eval_mask_logits'][:, class_token_idx]
+    # return pattern_logits_dict
+    return pattern_probs
+
+
 def soft_label_data(args):
     model, tokenizer = get_model_and_tokenizer(args, 'masked_LM')
     train, dev, test, data = load_data(args)
+    data = data[:10]
     adjust_target_column((train, dev, test, data), args)
 
-    pattern_logits = []
+    pattern_probs = []
     for pattern, verbalizer in zip(args.patterns, args.verbalizers):
-        curr_train, curr_dev, curr_test, curr_data = apply_pattern_to_all_datasets(pattern, verbalizer, (train, dev, test, data), args)
-        tokenized_train, tokenized_dev, tokenized_test, tokenized_data = tokenize_datasets(tokenizer, (curr_train, curr_dev, curr_test, curr_data), args)
+        apply_pattern_to_all_datasets(pattern, verbalizer, (train, dev, test, data), args)
+        tokenized_train, tokenized_dev, tokenized_test, tokenized_data = tokenize_datasets(tokenizer, (train, dev, test, data), args)
         trainer = set_trainer(model, tokenizer, tokenized_train, tokenized_dev, args)
-        trainer.train()
+        # trainer.train()
 
         trainer.eval_dataset = tokenized_data
         evaluation = trainer.evaluate()
 
-        pattern_logits.append(get_pattern_logits())
+        pattern_probs.append(get_pattern_probs(evaluation, verbalizer, tokenizer, args))
 
-    logits = np.mean(np.array(pattern_logits), axis=0)
-    classifier_data = add_logits_targets(tokenized_data)
+    data_target_probs = np.mean(np.array(pattern_probs), axis=0)
+    data['text'], test['text'] = data['social_assessment'], test['social_assessment']
+    data['target'], test['target'] = data[args.target_column], test[args.target_column]
 
-    return classifier_data, tokenized_test
+    return data, data_target_probs, test
 
 
 if __name__ == "__main__":
     args = parse_args()
-    train, test = soft_label_data(args)
+    args.patterns = get_patterns_from_args(args)
+    args.verbalizers = get_verbalizers_from_args(args)
+    train, train_target_probs, test = soft_label_data(args)
     model, tokenizer = get_model_and_tokenizer(args, 'sequence_classification')
     trainer = set_trainer(model, tokenizer, train, test, args)
 

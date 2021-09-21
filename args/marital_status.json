@@ -1,9 +1,9 @@
 {
   "data_file": "data/social_assesments_100_annotations_clean_filled_en.tsv",
-  "model_dir": "/home/aviad/Documents/AMNLPFinal/models/roberta-base/missing_middle_5_sentences_out_of_11/text_target/1m/01",
+  "model_dir": "model_outputs/marital_status_1",
   "model_name": "roberta-base",
-  "model_type": "token_classification",
-  "batch_size": 16,
+  "model_type": "MLM",
+  "batch_size": 4,
 
   "n_train_samples": 34,
   "n_dev_samples": 33,
@@ -11,17 +11,15 @@
 
   "target_column": "marital_status",
   "patterns":
-     ["omit_references",
-      "longest_sequence",
-      "truncate_to_n_sentences_11"],
+     ["marital_status_pattern_1",
+     "marital_status_pattern_1"],
   "verbalizers":
-     ["omit_references",
-      "longest_sequence",
-      "truncate_to_n_sentences_11"],
+     ["marital_status_verbalizer_1",
+     "marital_status_verbalizer_2_fake"],
 
-  "num_labels": 3,
-  "labels": ["married", "widowed", "not_married"],
-  "label_dictionary": [["unknown", "not_married"], ["single", "not_married"], ["divorced", "not_married"]],
+  "num_labels": 2,
+  "labels": ["married", "not_married"],
+  "label_dictionary": [["unknown", "not_married"], ["single", "not_married"], ["divorced", "not_married"], ["widowed", "not_married"]],
 
   "logging_steps": 10,
   "eval_steps": 78,

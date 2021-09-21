@@ -5,8 +5,8 @@ class Args(object):
     def __init__(self, json_file):
         with open(json_file, 'r') as json_file:
             json_data = json.load(json_file)
-            self.data_file = json_data["model_dir"]
-            self.model_dir = json_data["data_file"]
+            self.data_file = json_data["data_file"]
+            self.model_dir = json_data["model_dir"]
             self.model_name = json_data["model_name"]
             self.model_type = json_data["model_type"]
             self.batch_size = json_data["batch_size"]
@@ -27,3 +27,8 @@ class Args(object):
             self.eval_steps = json_data["eval_steps"]
             self.num_evals = json_data["num_evals"]
             self.dropout = json_data["dropout"]
+
+            if "eval" in json_data:
+                self.eval = json_data["eval"]
+            else:
+                self.eval = False

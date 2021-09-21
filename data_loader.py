@@ -32,9 +32,6 @@ def load_data(args):
     n_dev_samples = args.n_dev_samples
     n_test_samples = args.n_test_samples
 
-    patterns = get_patterns_from_args(args)
-    args.patterns = patterns
-
     train = data[:n_train_samples]
     dev = data[n_train_samples: n_train_samples + n_dev_samples]
     test = data[n_train_samples + n_dev_samples: n_train_samples + n_dev_samples + n_test_samples]
