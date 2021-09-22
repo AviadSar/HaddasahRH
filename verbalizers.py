@@ -1,7 +1,8 @@
 class marital_status_verbalizer_1(object):
     def __init__(self, args):
         self.target_column = args.target_column
-        self.classes = {'married': ' yes', 'not_married': ' no'}
+        # args.labels[0] == "married", args.labels[1] == "not_married"
+        self.classes = {args.labels[0]: ' yes', args.labels[1]: ' no'}
 
     def __call__(self, row, *args, **kwargs):
         target = row['text']
@@ -14,7 +15,8 @@ class marital_status_verbalizer_1(object):
 class marital_status_verbalizer_2_fake(object):
     def __init__(self, args):
         self.target_column = args.target_column
-        self.classes = {'married': ' ball', 'not_married': ' chip'}
+        # args.labels[0] == "married", args.labels[1] == "not_married"
+        self.classes = {args.labels[0]: ' ball', args.labels[1]: ' chip'}
 
     def __call__(self, row, *args, **kwargs):
         target = row['text']

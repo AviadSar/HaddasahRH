@@ -6,10 +6,10 @@ class Args(object):
         with open(json_file, 'r') as json_file:
             json_data = json.load(json_file)
             self.data_file = json_data["data_file"]
-            self.model_dir = json_data["model_dir"]
+            self.pattern_model_dir = json_data["pattern_model_dir"]
+            self.classifier_model_dir = json_data["classifier_model_dir"]
             self.model_name = json_data["model_name"]
             self.model_type = json_data["model_type"]
-            self.batch_size = json_data["batch_size"]
 
             self.n_train_samples = json_data["n_train_samples"]
             self.n_dev_samples = json_data["n_dev_samples"]
@@ -23,10 +23,21 @@ class Args(object):
             self.labels = json_data["labels"]
             self.label_dictionary = json_data["label_dictionary"]
 
-            self.logging_steps = json_data["logging_steps"]
-            self.eval_steps = json_data["eval_steps"]
-            self.num_evals = json_data["num_evals"]
-            self.dropout = json_data["dropout"]
+            self.pattern_batch_size = json_data["pattern_batch_size"]
+            self.pattern_logging_steps = json_data["pattern_logging_steps"]
+            self.pattern_eval_steps = json_data["pattern_eval_steps"]
+            self.pattern_gradient_accumulation_steps = json_data["pattern_gradient_accumulation_steps"]
+            self.pattern_warmup_steps = json_data["pattern_warmup_steps"]
+            self.pattern_num_evals = json_data["pattern_num_evals"]
+            self.pattern_dropout = json_data["pattern_dropout"]
+
+            self.classifier_batch_size = json_data["classifier_batch_size"]
+            self.classifier_logging_steps = json_data["classifier_logging_steps"]
+            self.classifier_eval_steps = json_data["classifier_eval_steps"]
+            self.classifier_gradient_accumulation_steps = json_data["classifier_gradient_accumulation_steps"]
+            self.classifier_warmup_steps = json_data["classifier_warmup_steps"]
+            self.classifier_num_evals = json_data["classifier_num_evals"]
+            self.classifier_dropout = json_data["classifier_dropout"]
 
             if "eval" in json_data:
                 self.eval = json_data["eval"]

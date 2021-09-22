@@ -19,6 +19,7 @@ import dataset_classes
 from datasets import load_metric
 from logger import Logger, log_from_log_history
 from data_loader import load_data
+from model_classes import RobertaForSoftLabelSequenceClassification
 
 accuracy_metric = load_metric("accuracy")
 
@@ -28,6 +29,12 @@ class EvaluateAndSaveCallback(TrainerCallback):
         if state.global_step % callback_args.eval_steps == 0:
             control.should_evaluate = True
             control.should_save = True
+
+
+class EvaluateCallback(TrainerCallback):
+    def on_step_end(self, callback_args, state, control, logs=None, **kwargs):
+        if state.global_step % callback_args.eval_steps == 0:
+            control.should_evaluate = True
 
 
 class LoggingCallback(TrainerCallback):
@@ -52,19 +59,31 @@ def parse_args():
     return args
 
 
-def get_model_and_tokenizer(args, type):
+def get_model_and_tokenizer(args, type='pattern'):
+    if type == 'pattern':
+        dropout = args.pattern_dropout
+    elif type == 'classifier':
+        dropout = args.classifier_dropout
+    else:
+        raise ValueError('"type" argument for "get_model_and_tokenizer" mast be "pattern" or "classifier", not {}'.format(type))
+
     model, tokenizer = None, None
     if 'roberta' in args.model_name:
         tokenizer = RobertaTokenizerFast.from_pretrained(args.model_name)
-        if type == 'sequence_classification':
+        if args.model_type == 'sequence_classification':
             model = RobertaForSequenceClassification.from_pretrained(args.model_name,
-                                                                     hidden_dropout_prob=args.dropout,
-                                                                     attention_probs_dropout_prob=args.dropout,
+                                                                     hidden_dropout_prob=dropout,
+                                                                     attention_probs_dropout_prob=dropout,
                                                                      num_labels=args.num_labels)
-        elif type == 'masked_LM':
+        elif args.model_type == 'MLM':
             model = RobertaForMaskedLM.from_pretrained(args.model_name,
-                                                                  hidden_dropout_prob=args.dropout,
-                                                                  attention_probs_dropout_prob=args.dropout)
+                                                                  hidden_dropout_prob=dropout,
+                                                                  attention_probs_dropout_prob=dropout)
+        elif args.model_type == 'soft_label_classification':
+            model = RobertaForSoftLabelSequenceClassification.from_pretrained(args.model_name,
+                                                                     hidden_dropout_prob=dropout,
+                                                                     attention_probs_dropout_prob=dropout,
+                                                                     num_labels=args.num_labels)
     if model and args.eval:
         model = model.from_pretrained(args.model_dir)
     if model and tokenizer:
@@ -86,6 +105,14 @@ def compute_sequence_accuracy(eval_pred):
 
 
 def compute_MLM_accuracy(eval_pred):
+    logits, labels = eval_pred
+    predictions = np.argmax(logits, axis=-1)
+    metric_dict = accuracy_metric.compute(predictions=predictions[labels != -100], references=labels[labels != -100])
+
+    return metric_dict
+
+
+def compute_MLM_accuracy_and_logits(eval_pred):
     logits, labels = eval_pred
     predictions = np.argmax(logits, axis=-1)
     metric_dict = accuracy_metric.compute(predictions=predictions[labels != -100], references=labels[labels != -100])
@@ -129,6 +156,8 @@ def encode_targets(encoded_text, target, tokenizer, args):
         return encode_targets_for_token_classification(target, tokenizer)
     elif args.model_type == 'MLM':
         return encode_targets_for_MLM(encoded_text, target, tokenizer)
+    elif args.model_type == 'soft_label_classification':
+        return target
 
 
 def tokenize_datasets(tokenizer, datasets, args):
@@ -148,24 +177,44 @@ def tokenize_datasets(tokenizer, datasets, args):
     return datasets
 
 
-def set_trainer(model, tokenizer, train, eval, args):
+def set_trainer(model, train, eval, args, type='pattern'):
+    if type == 'pattern':
+        model_dir = args.pattern_model_dir
+        batch_size = args.pattern_batch_size
+        logging_steps = args.pattern_logging_steps
+        eval_steps = args.pattern_eval_steps
+        gradient_accumulation_steps = args.pattern_gradient_accumulation_steps
+        num_evals = args.pattern_num_evals
+        warmup_steps = args.pattern_warmup_steps
+        callbacks = [EvaluateCallback(), LoggingCallback()]
+    elif type == 'classifier':
+        model_dir = args.classifier_model_dir
+        batch_size = args.classifier_batch_size
+        logging_steps = args.classifier_logging_steps
+        eval_steps = args.classifier_eval_steps
+        gradient_accumulation_steps = args.classifier_gradient_accumulation_steps
+        num_evals = args.classifier_num_evals
+        warmup_steps = args.classifier_warmup_steps
+        callbacks = [EvaluateAndSaveCallback(), LoggingCallback()]
+    else:
+        raise ValueError('trainer type mast be "pattern" or "classifier", not {}'.format(type))
+
     training_args = TrainingArguments(
-        output_dir=args.model_dir,
-        max_steps=args.eval_steps * args.num_evals,
-        per_device_train_batch_size=args.batch_size,
-        per_device_eval_batch_size=args.batch_size,
-        gradient_accumulation_steps=128 // args.batch_size,
-        eval_accumulation_steps=args.batch_size,
-        warmup_steps=500,
+        output_dir=model_dir,
+        max_steps=eval_steps * num_evals,
+        per_device_train_batch_size=batch_size,
+        per_device_eval_batch_size=batch_size,
+        gradient_accumulation_steps=gradient_accumulation_steps,
+        eval_accumulation_steps=1,
+        warmup_steps=warmup_steps,
         weight_decay=0.01,
         save_strategy='no',
-        logging_steps=args.logging_steps,
-        eval_steps=args.eval_steps,
+        logging_steps=logging_steps,
+        eval_steps=eval_steps,
         save_total_limit=1,
         seed=42,
         load_best_model_at_end=True,
-        metric_for_best_model='eval_accuracy',
-        greater_is_better=True
+        metric_for_best_model='eval_loss'
     )
 
     trainer = Trainer(
@@ -173,7 +222,7 @@ def set_trainer(model, tokenizer, train, eval, args):
         args=training_args,
         train_dataset=train,
         eval_dataset=eval,
-        callbacks=[EvaluateAndSaveCallback(), LoggingCallback()],
+        callbacks=callbacks,
         compute_metrics=compute_metrics(args)
     )
 
@@ -192,7 +241,7 @@ def adjust_target_column(datasets, args):
 
 
 def get_pattern_probs(evaluation, verbalizer, tokenizer, args):
-    class_token_idxs = [tokenizer.encode(verbalizer.classes[target_class])[1] for target_class in sorted(verbalizer.classes)]
+    class_token_idxs = [tokenizer.encode(verbalizer.classes[label])[1] for label in args.labels]
     pattern_probs = softmax(evaluation['eval_mask_logits'][:, class_token_idxs], axis=1)
     # pattern_logits_dict = {}
     # for target_class in verbalizer.classes.items():
@@ -202,19 +251,32 @@ def get_pattern_probs(evaluation, verbalizer, tokenizer, args):
     return pattern_probs
 
 
+class labels_to_classes(object):
+    def __init__(self, args):
+        self.args = args
+
+    def __call__(self, label, *args, **kwargs):
+        for idx, label_name in enumerate(self.args.labels):
+            if label == label_name:
+                return idx
+        raise ValueError('label "{}" is not a viable label'.format(label))
+
+
 def soft_label_data(args):
-    model, tokenizer = get_model_and_tokenizer(args, 'masked_LM')
+    args.model_type = 'MLM'
+    model, tokenizer = get_model_and_tokenizer(args)
     train, dev, test, data = load_data(args)
-    data = data[:10]
+    data = data[:1000]
     adjust_target_column((train, dev, test, data), args)
 
     pattern_probs = []
     for pattern, verbalizer in zip(args.patterns, args.verbalizers):
         apply_pattern_to_all_datasets(pattern, verbalizer, (train, dev, test, data), args)
         tokenized_train, tokenized_dev, tokenized_test, tokenized_data = tokenize_datasets(tokenizer, (train, dev, test, data), args)
-        trainer = set_trainer(model, tokenizer, tokenized_train, tokenized_dev, args)
-        # trainer.train()
+        trainer = set_trainer(model, tokenized_train, tokenized_dev, args, type='pattern')
+        trainer.train()
 
+        trainer.compute_metrics = compute_MLM_accuracy_and_logits
         trainer.eval_dataset = tokenized_data
         evaluation = trainer.evaluate()
 
@@ -222,18 +284,23 @@ def soft_label_data(args):
 
     data_target_probs = np.mean(np.array(pattern_probs), axis=0)
     data['text'], test['text'] = data['social_assessment'], test['social_assessment']
-    data['target'], test['target'] = data[args.target_column], test[args.target_column]
+    data['target'], test['target'] = list(data_target_probs), test[args.target_column].apply(labels_to_classes(args))
 
-    return data, data_target_probs, test
+    train, dev = data[:(len(data) // 10) * 8], data[(len(data) // 10) * 8:]
+
+    return train, dev, test
 
 
 if __name__ == "__main__":
     args = parse_args()
     args.patterns = get_patterns_from_args(args)
     args.verbalizers = get_verbalizers_from_args(args)
-    train, train_target_probs, test = soft_label_data(args)
-    model, tokenizer = get_model_and_tokenizer(args, 'sequence_classification')
-    trainer = set_trainer(model, tokenizer, train, test, args)
+    train, dev, test = soft_label_data(args)
+
+    args.model_type = 'soft_label_classification'
+    model, tokenizer = get_model_and_tokenizer(args)
+    tokenized_train, tokenized_dev, tokenized_test= tokenize_datasets(tokenizer, (train, dev, test), args)
+    trainer = set_trainer(model, tokenized_train, tokenized_dev, args, type='classifier')
 
     try:
         trainer.train(resume_from_checkpoint=True)
@@ -243,6 +310,11 @@ if __name__ == "__main__":
         else:
             raise e
 
-    trainer.save_model(args.model_dir)
+    trainer.save_model(args.classifier_model_dir)
     trainer.save_state()
-    log_from_log_history(trainer.state.log_history, args.model_dir)
+
+    trainer.eval_dataset = tokenized_test
+    trainer.compute_metrics = compute_sequence_accuracy
+    trainer.evaluate()
+
+    log_from_log_history(trainer.state.log_history, args.classifier_model_dir)

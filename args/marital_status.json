@@ -1,13 +1,13 @@
 {
   "data_file": "data/social_assesments_100_annotations_clean_filled_en.tsv",
-  "model_dir": "model_outputs/marital_status_1",
+  "pattern_model_dir": "model_outputs/marital_status_pattern",
+  "classifier_model_dir": "model_outputs/marital_status",
   "model_name": "roberta-base",
   "model_type": "MLM",
-  "batch_size": 4,
 
-  "n_train_samples": 34,
-  "n_dev_samples": 33,
-  "n_test_samples": 33,
+  "n_train_samples": 30,
+  "n_dev_samples": 30,
+  "n_test_samples": 30,
 
   "target_column": "marital_status",
   "patterns":
@@ -21,8 +21,19 @@
   "labels": ["married", "not_married"],
   "label_dictionary": [["unknown", "not_married"], ["single", "not_married"], ["divorced", "not_married"], ["widowed", "not_married"]],
 
-  "logging_steps": 10,
-  "eval_steps": 78,
-  "num_evals": 100,
-  "dropout": 0.1
+  "pattern_batch_size": 2,
+  "pattern_logging_steps": 17,
+  "pattern_eval_steps": 17,
+  "pattern_gradient_accumulation_steps": 17,
+  "pattern_warmup_steps": 17,
+  "pattern_num_evals": 5,
+  "pattern_dropout": 0.1,
+
+  "classifier_batch_size": 4,
+  "classifier_logging_steps": 10,
+  "classifier_eval_steps": 150,
+  "classifier_gradient_accumulation_steps": 32,
+  "classifier_warmup_steps": 150,
+  "classifier_num_evals": 10,
+  "classifier_dropout": 0.1
 }

@@ -44,17 +44,16 @@ class Logger(object):
         draw_train_graphs(self.train_loss, range(1, len(self.train_loss) + 1), self.eval_loss, range(1, len(self.eval_loss) + 1), self.eval_accuracy, self.experiment_name, self.logs_dir)
 
 
-def write_json(train_loss, train_steps, eval_loss, eval_steps, eval_accuracy, experiment_name, logs_dir):
-    data_dict = {'train_loss': train_loss, 'train_steps': train_steps, 'eval_loss': eval_loss, 'eval_steps': eval_steps, 'eval_accuracy': eval_accuracy, 'experiment_name': experiment_name}
+def write_json(train_loss, train_steps, eval_loss, eval_steps, experiment_name, logs_dir):
+    data_dict = {'train_loss': train_loss, 'train_steps': train_steps, 'eval_loss': eval_loss, 'eval_steps': eval_steps, 'experiment_name': experiment_name}
 
     with open(logs_dir + os.path.sep + 'log.json', 'w') as json_file:
         json.dump(data_dict, json_file)
 
 
-def draw_train_graphs(train_loss, train_steps, eval_loss, eval_steps, eval_accuracy, experiment_name, logs_dir):
+def draw_train_graphs(train_loss, train_steps, eval_loss, eval_steps, experiment_name, logs_dir):
     plt.plot(train_steps, train_loss, label='train')
     plt.plot(eval_steps, eval_loss, label='evaluation')
-    # plt.xticks(train_steps)
     plt.legend(loc='upper right')
     plt.xlabel("Steps")
     plt.ylabel("Loss")
@@ -63,15 +62,14 @@ def draw_train_graphs(train_loss, train_steps, eval_loss, eval_steps, eval_accur
     plt.savefig(logs_dir + os.path.sep + 'loss.jpg')
     plt.close()
 
-    plt.plot(eval_steps, eval_accuracy, label='evaluation accuracy')
-    # plt.xticks(train_steps)
-    plt.legend(loc='upper right')
-    plt.title('Evaluation accuracy over training\n' + experiment_name)
-    plt.xlabel("Steps")
-    plt.ylabel("Accuracy")
-    plt.tight_layout()
-    plt.savefig(logs_dir + os.path.sep + 'accuracy.jpg')
-    plt.close()
+    # plt.plot(eval_steps, eval_accuracy, label='evaluation accuracy')
+    # plt.legend(loc='upper right')
+    # plt.title('Evaluation accuracy over training\n' + experiment_name)
+    # plt.xlabel("Steps")
+    # plt.ylabel("Accuracy")
+    # plt.tight_layout()
+    # plt.savefig(logs_dir + os.path.sep + 'accuracy.jpg')
+    # plt.close()
 
 
 def get_experiment_name_from_dir(model_dir):
@@ -95,7 +93,6 @@ def log_from_log_history(log_history, model_dir):
     train_loss = []
     train_steps = []
     eval_loss = []
-    eval_accuracy = []
     eval_steps = []
 
     for index, log in enumerate(log_history):
@@ -104,11 +101,10 @@ def log_from_log_history(log_history, model_dir):
             train_steps.append(log['step'])
         if 'eval_loss' in log:
             eval_loss.append(log['eval_loss'])
-            eval_accuracy.append(log['eval_accuracy'])
             eval_steps.append(log['step'])
 
-    draw_train_graphs(train_loss, train_steps, eval_loss, eval_steps, eval_accuracy, experiment_name, logs_dir)
-    write_json(train_loss, train_steps, eval_loss, eval_steps, eval_accuracy, experiment_name, logs_dir)
+    draw_train_graphs(train_loss, train_steps, eval_loss, eval_steps, experiment_name, logs_dir)
+    write_json(train_loss, train_steps, eval_loss, eval_steps, experiment_name, logs_dir)
 
 
 def log_from_trainer_state_file(trainer_state_file, model_dir):
