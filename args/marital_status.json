@@ -26,7 +26,7 @@
   "pattern_eval_steps": 17,
   "pattern_gradient_accumulation_steps": 17,
   "pattern_warmup_steps": 17,
-  "pattern_num_evals": 5,
+  "pattern_num_evals": 1,
   "pattern_dropout": 0.1,
 
   "classifier_batch_size": 4,
@@ -34,6 +34,6 @@
   "classifier_eval_steps": 150,
   "classifier_gradient_accumulation_steps": 32,
   "classifier_warmup_steps": 150,
-  "classifier_num_evals": 10,
+  "classifier_num_evals": 1,
   "classifier_dropout": 0.1
 }
