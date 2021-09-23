@@ -107,7 +107,7 @@ def compute_sequence_accuracy(eval_pred):
 def compute_MLM_accuracy(eval_pred):
     logits, labels = eval_pred
     predictions = np.argmax(logits, axis=-1)
-    metric_dict = accuracy_metric.compute(predictions=predictions[labels != -100], references=labels[labels != -100])
+    metric_dict = accuracy_metric.compute(predictions=predictions, references=labels[labels != -100])
 
     return metric_dict
 
