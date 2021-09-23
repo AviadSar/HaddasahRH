@@ -280,7 +280,7 @@ def soft_label_data(args):
         apply_pattern_to_all_datasets(pattern, verbalizer, (train, dev, test, data), args)
         tokenized_train, tokenized_dev, tokenized_test, tokenized_data = tokenize_datasets(tokenizer, (train, dev, test, data), args)
         trainer = set_trainer(model, tokenized_train, tokenized_dev, args, type='pattern')
-        # trainer.train()
+        trainer.train()
 
         trainer.compute_metrics = compute_MLM_accuracy_and_logits
         trainer.eval_dataset = tokenized_data
