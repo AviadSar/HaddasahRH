@@ -116,6 +116,7 @@ ROBERTA_INPUTS_DOCSTRING = r"""
 class RobertaForSoftLabelSequenceClassification(RobertaForSequenceClassification):
     def __init__(self, config):
         super().__init__(config)
+        self.is_soft_label = None
 
     def forward(
             self,
@@ -154,13 +155,15 @@ class RobertaForSoftLabelSequenceClassification(RobertaForSequenceClassification
 
         loss = None
         if labels is not None:
-            if self.config.problem_type is None:
+            if self.config.problem_type is None or self.is_soft_label is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
                 elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
                     self.config.problem_type = "single_label_classification"
+                    self.is_soft_label = False
                 elif self.num_labels > 1 and labels.dtype == torch.float:
-                    self.config.problem_type = "soft_label_classification"
+                    self.config.problem_type = "single_label_classification"
+                    self.is_soft_label = True
                 else:
                     self.config.problem_type = "multi_label_classification"
 
@@ -171,10 +174,11 @@ class RobertaForSoftLabelSequenceClassification(RobertaForSequenceClassification
                 else:
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-            elif self.config.problem_type == "soft_label_classification":
-                loss = cross_entropy(logits, labels)
+                if not self.is_soft_label:
+                    loss_fct = CrossEntropyLoss()
+                    loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                else:
+                    loss = cross_entropy(logits, labels)
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)

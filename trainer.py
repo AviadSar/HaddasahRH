@@ -323,7 +323,7 @@ if __name__ == "__main__":
 
     args.model_type = 'soft_label_classification'
     model, tokenizer = get_model_and_tokenizer(args)
-    tokenized_train, tokenized_dev, tokenized_test= tokenize_datasets(tokenizer, (train, dev, test), args)
+    tokenized_train, tokenized_dev, tokenized_test = tokenize_datasets(tokenizer, (train, dev, test), args)
     trainer = set_trainer(model, tokenized_train, tokenized_dev, args, type='classifier')
 
     # try:
