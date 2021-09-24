@@ -288,7 +288,7 @@ def soft_label_data(args):
     args.model_type = 'MLM'
     model, tokenizer = get_model_and_tokenizer(args)
     train, dev, test, data = load_data(args)
-    data = data[:10]
+    # data = data[:10]
     adjust_target_column((train, dev, test, data), args)
 
     pattern_probs = []
