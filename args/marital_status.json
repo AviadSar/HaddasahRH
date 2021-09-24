@@ -21,12 +21,12 @@
   "labels": ["married", "not_married"],
   "label_dictionary": [["unknown", "not_married"], ["single", "not_married"], ["divorced", "not_married"], ["widowed", "not_married"]],
 
-  "pattern_batch_size": 17,
+  "pattern_batch_size": 6,
   "pattern_logging_steps": 17,
   "pattern_eval_steps": 17,
-  "pattern_gradient_accumulation_steps": 1,
+  "pattern_gradient_accumulation_steps": 3,
   "pattern_warmup_steps": 17,
-  "pattern_num_evals": 5,
+  "pattern_num_evals": 1,
   "pattern_dropout": 0.1,
 
   "classifier_batch_size": 16,
