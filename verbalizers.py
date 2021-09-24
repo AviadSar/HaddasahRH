@@ -29,19 +29,19 @@ class marital_status_verbalizer_2(object):
 def get_verbalizer_from_string(verbalizer_string, args):
     if verbalizer_string == 'marital_status_verbalizer_1':
         return marital_status_verbalizer_1(args)
-    elif verbalizer_string == 'marital_status_verbalizer_2_fake':
-        return marital_status_verbalizer_2_fake(args)
+    elif verbalizer_string == 'marital_status_verbalizer_2':
+        return marital_status_verbalizer_2(args)
     return None
 
 
 def get_verbalizers_from_args(args):
     if args.verbalizers is None:
-        return None
+        raise ValueError('no verbalizers found in args file.')
     verbalizers = []
     for verbalizer_string in args.verbalizers:
         verbalizer = get_verbalizer_from_string(verbalizer_string, args)
         if verbalizer is None:
-            return None
+            raise ValueError('no such verbalizer "{}" in verbalizers.py'.format(verbalizer_string))
         else:
             verbalizers.append(verbalizer)
     return verbalizers
