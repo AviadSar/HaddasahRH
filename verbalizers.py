@@ -12,18 +12,18 @@ class marital_status_verbalizer_1(object):
             return target.replace('<mask>', 'no')
 
 
-class marital_status_verbalizer_2_fake(object):
+class marital_status_verbalizer_2(object):
     def __init__(self, args):
         self.target_column = args.target_column
         # args.labels[0] == "married", args.labels[1] == "not_married"
-        self.classes = {args.labels[0]: ' ball', args.labels[1]: ' chip'}
+        self.classes = {args.labels[0]: ' married', args.labels[1]: ' single'}
 
     def __call__(self, row, *args, **kwargs):
         target = row['text']
         if row[self.target_column] == 'married':
-            return target.replace('<mask>', 'ball')
+            return target.replace('<mask>', 'married')
         else:
-            return target.replace('<mask>', 'chip')
+            return target.replace('<mask>', 'single')
 
 
 def get_verbalizer_from_string(verbalizer_string, args):

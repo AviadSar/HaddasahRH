@@ -2,6 +2,10 @@ def marital_status_pattern_1(text):
     return text + " is this person married? <mask>"
 
 
+def marital_status_pattern_2(text):
+    return text + " this person is <mask>"
+
+
 def apply_pattern(pattern, verbalizer, dataset, args):
     dataset['text'] = dataset['social_assessment'].apply(pattern)
     dataset['target'] = dataset.apply(verbalizer, axis=1)
