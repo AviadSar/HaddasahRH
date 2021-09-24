@@ -28,7 +28,7 @@ def cross_entropy(input, target, size_average=True, ignore_value=-100):
     """
     ignore_mask = torch.zeros(target.size(), device=target.device)
     ignore_mask[target != ignore_value] = 1
-    logsoftmax = torch.nn.LogSoftmax()
+    logsoftmax = torch.nn.LogSoftmax(dim=1)
     if size_average:
         return torch.mean(torch.sum(-(target * ignore_mask) * logsoftmax(input), dim=1))
     else:
