@@ -326,13 +326,14 @@ if __name__ == "__main__":
     tokenized_train, tokenized_dev, tokenized_test= tokenize_datasets(tokenizer, (train, dev, test), args)
     trainer = set_trainer(model, tokenized_train, tokenized_dev, args, type='classifier')
 
-    try:
-        trainer.train(resume_from_checkpoint=True)
-    except ValueError as e:
-        if 'No valid checkpoint' in e.args[0]:
-            trainer.train()
-        else:
-            raise e
+    # try:
+    #     trainer.train(resume_from_checkpoint=True)
+    # except ValueError as e:
+    #     if 'No valid checkpoint' in e.args[0]:
+    #         trainer.train()
+    #     else:
+    #         raise e
+    trainer.train()
 
     trainer.save_model(args.classifier_model_dir)
     trainer.save_state()
@@ -341,6 +342,7 @@ if __name__ == "__main__":
     trainer.model.config.problem_type = None
     trainer.eval_dataset = tokenized_test
     trainer.compute_metrics = compute_sequence_accuracy
-    trainer.evaluate()
+    evaluation = trainer.evaluate()
+    print(evaluation)
 
     log_from_log_history(trainer.state.log_history, args.classifier_model_dir)
