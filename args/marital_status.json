@@ -12,28 +12,28 @@
   "target_column": "marital_status",
   "patterns":
      ["marital_status_pattern_1",
-     "marital_status_pattern_1"],
+     "marital_status_pattern_2"],
   "verbalizers":
      ["marital_status_verbalizer_1",
-     "marital_status_verbalizer_2_fake"],
+     "marital_status_verbalizer_2"],
 
   "num_labels": 2,
   "labels": ["married", "not_married"],
   "label_dictionary": [["unknown", "not_married"], ["single", "not_married"], ["divorced", "not_married"], ["widowed", "not_married"]],
 
-  "pattern_batch_size": 2,
+  "pattern_batch_size": 17,
   "pattern_logging_steps": 17,
   "pattern_eval_steps": 17,
-  "pattern_gradient_accumulation_steps": 17,
+  "pattern_gradient_accumulation_steps": 1,
   "pattern_warmup_steps": 17,
-  "pattern_num_evals": 1,
+  "pattern_num_evals": 5,
   "pattern_dropout": 0.1,
 
-  "classifier_batch_size": 4,
+  "classifier_batch_size": 16,
   "classifier_logging_steps": 10,
   "classifier_eval_steps": 150,
-  "classifier_gradient_accumulation_steps": 32,
+  "classifier_gradient_accumulation_steps": 2,
   "classifier_warmup_steps": 150,
-  "classifier_num_evals": 1,
+  "classifier_num_evals": 10,
   "classifier_dropout": 0.1
 }

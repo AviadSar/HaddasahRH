@@ -104,25 +104,44 @@ def compute_sequence_accuracy(eval_pred):
     return accuracy_metric.compute(predictions=predictions, references=labels)
 
 
-def compute_MLM_accuracy(eval_pred):
-    logits, labels = eval_pred
-    predictions = np.argmax(logits, axis=-1)
-    metric_dict = accuracy_metric.compute(predictions=predictions, references=labels[labels != -100])
+class compute_MLM_accuracy(object):
+    def __init__(self, verbalizer, tokenizer, args):
+        self.verbalizer = verbalizer
+        self.tokenizer = tokenizer
+        self.args = args
 
-    return metric_dict
+    def __call__(self, eval_pred):
+        logits, labels = eval_pred
+
+        class_token_idxs = [self.tokenizer.encode(self.verbalizer.classes[label])[1] for label in self.args.labels]
+        for idx, class_token_idx in enumerate(class_token_idxs):
+            labels[labels == class_token_idx] = idx
+
+        predictions = np.argmax(logits, axis=-1)
+        metric_dict = accuracy_metric.compute(predictions=predictions, references=labels[labels != -100])
+
+        return metric_dict
 
 
-def compute_MLM_accuracy_and_logits(eval_pred):
-    logits, labels = eval_pred
-    predictions = np.argmax(logits, axis=-1)
-    # metric_dict = accuracy_metric.compute(predictions=predictions[labels != -100], references=labels[labels != -100])
-    metric_dict = accuracy_metric.compute(predictions=predictions, references=labels[labels != -100])
+class compute_MLM_accuracy_and_logits(object):
+    def __init__(self, verbalizer, tokenizer, args):
+        self.verbalizer = verbalizer
+        self.tokenizer = tokenizer
+        self.args = args
 
-    # mask_positions = np.where(labels != -100)
-    # metric_dict.update({'mask_logits': logits[mask_positions]})
-    metric_dict.update({'mask_logits': softmax(logits, axis=1)})
+    def __call__(self, eval_pred):
+        logits, labels = eval_pred
 
-    return metric_dict
+        class_token_idxs = [self.tokenizer.encode(self.verbalizer.classes[label])[1] for label in self.args.labels]
+        for idx, class_token_idx in enumerate(class_token_idxs):
+            labels[labels == class_token_idx] = idx
+
+        predictions = np.argmax(logits, axis=-1)
+        metric_dict = accuracy_metric.compute(predictions=predictions, references=labels[labels != -100])
+
+        metric_dict.update({'mask_logits': softmax(logits, axis=1)})
+
+        return metric_dict
 
 
 def compute_metrics(args):
@@ -130,8 +149,6 @@ def compute_metrics(args):
         return compute_token_accuracy
     elif args.model_type == 'sequence_classification':
         return compute_sequence_accuracy
-    elif args.model_type == 'MLM':
-        return compute_MLM_accuracy
 
 
 def encode_targets_for_token_classification(target, tokenizer):
@@ -280,9 +297,10 @@ def soft_label_data(args):
         apply_pattern_to_all_datasets(pattern, verbalizer, (train, dev, test, data), args)
         tokenized_train, tokenized_dev, tokenized_test, tokenized_data = tokenize_datasets(tokenizer, (train, dev, test, data), args)
         trainer = set_trainer(model, tokenized_train, tokenized_dev, args, type='pattern')
+        trainer.compute_metrics = compute_MLM_accuracy(verbalizer, tokenizer, args)
         trainer.train()
 
-        trainer.compute_metrics = compute_MLM_accuracy_and_logits
+        trainer.compute_metrics = compute_MLM_accuracy_and_logits(verbalizer, tokenizer, args)
         trainer.eval_dataset = tokenized_data
         evaluation = trainer.evaluate()
 
