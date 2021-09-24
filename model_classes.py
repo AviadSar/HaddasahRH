@@ -26,7 +26,7 @@ def cross_entropy(input, target, size_average=True, ignore_value=-100):
         loss = cross_entropy(input, target)
         loss.backward()
     """
-    ignore_mask = torch.zeros(target.size())
+    ignore_mask = torch.zeros(target.size(), device=target.device)
     ignore_mask[target != ignore_value] = 1
     logsoftmax = torch.nn.LogSoftmax()
     if size_average:
@@ -159,7 +159,7 @@ class RobertaForSoftLabelSequenceClassification(RobertaForSequenceClassification
                     self.config.problem_type = "regression"
                 elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
                     self.config.problem_type = "single_label_classification"
-                elif self.num_labels > 1 and labels.dtype == torch.tensor:
+                elif self.num_labels > 1 and labels.dtype == torch.float:
                     self.config.problem_type = "soft_label_classification"
                 else:
                     self.config.problem_type = "multi_label_classification"
