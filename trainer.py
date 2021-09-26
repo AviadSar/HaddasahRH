@@ -139,7 +139,8 @@ class compute_MLM_accuracy_and_logits(object):
         predictions = np.argmax(logits, axis=-1)
         metric_dict = accuracy_metric.compute(predictions=predictions, references=labels[labels != -100])
 
-        metric_dict.update({'mask_logits': softmax(logits, axis=1)})
+        temperature = 2
+        metric_dict.update({'mask_probs': softmax(logits / temperature, axis=1)})
 
         return metric_dict
 
@@ -270,7 +271,7 @@ def get_pattern_probs(evaluation, verbalizer, tokenizer, args):
     # return pattern_logits_dict
 
     # return pattern_probs
-    return evaluation['eval_mask_logits']
+    return evaluation['eval_mask_probs']
 
 
 class labels_to_classes(object):
@@ -288,7 +289,7 @@ def soft_label_data(args):
     args.model_type = 'MLM'
     model, tokenizer = get_model_and_tokenizer(args)
     train, dev, test, data = load_data(args)
-    # data = data[:10]
+    data = data[:10]
     adjust_target_column((train, dev, test, data), args)
 
     pattern_probs = []

@@ -1,55 +1,83 @@
 import os
 import json
 
-operating_systems = ['windows', 'linux']
-batch_sizes = [4, 16]
 
-sizes = ['10k', '100k', '1m']
-data_split_ratios = [[0.01, 1, 0], [0.1, 1, 0], [1, 1, 0]]
-num_evals = [50, 100, 100]
+args_file_dir = "args"
+data_file = "data/social_assesments_100_annotations_clean_filled_en.tsv"
+target_names = ["marital_status"]
+model_name = "roberta-base"
+model_type = "MLM"
 
-task_names = ['missing_middle_5_sentences_out_of_11']
-model_types = ['token_classification']
+n_train_samples = 30
+n_dev_samples = 30
+n_test_samples = 30
 
-model_names = ['roberta-base']
-targets = ['text_target']
+num_patterns_list = [2]
+patterns = ["marital_status_pattern_1", "marital_status_pattern_2"]
+verbalizers = ["marital_status_verbalizer_1", "marital_status_verbalizer_2"]
 
-dropouts = [0.1, 0.11, 0.125, 0.15]
+num_labels = 2
+labels_list = [["married", "not_married"]]
+label_dictionary_list = [[["unknown", "not_married"], ["single", "not_married"], ["divorced", "not_married"], ["widowed", "not_married"]]]
 
-for os_idx, operating_system in enumerate(operating_systems):
-    for model_name in model_names:
-        for task_idx, task_name in enumerate(task_names):
-            for target in targets:
-                for size_idx, size in enumerate(sizes):
-                    for dropout in dropouts:
-                        if operating_system == 'windows':
-                            args_file_dir = operating_system + '_args\\trainers\\' + model_name + '\\' + task_name + '\\' + target + '\\' + size + '\\' + str(dropout)[0] + str(dropout)[2:]
-                            args_file = '\\trainer_args.json'
-                            data_dir = 'C:\\my_documents\\AMNLPFinal\\datasets\\' + task_name + '\\' + target
-                            model_dir = 'C:\\my_documents\\AMNLPFinal\\models\\' + model_name + '\\' + task_name + '\\' + target + '\\' + size + '\\' + str(dropout)[0] + str(dropout)[2:]
-                        elif operating_system == 'linux':
-                            args_file_dir = operating_system + r'_args/trainers/' + model_name + '/' + task_name + '/' + target + '/' + size + '/' + str(dropout)[0] + str(dropout)[2:]
-                            args_file = '/trainer_args.json'
-                            data_dir = '/home/aviad/Documents/AMNLPFinal/datasets/' + task_name + '/' + target
-                            model_dir = '/home/aviad/Documents/AMNLPFinal/models/' + model_name + '/' + task_name + '/' + target + '/' + size + '/' + str(dropout)[0] + str(dropout)[2:]
-                        else:
-                            raise ValueError('No such operating system: ' + operating_system)
+pattern_batch_size = 1
+pattern_logging_steps = 15
+pattern_eval_steps = 60
+pattern_gradient_accumulation_steps = 3
+pattern_warmup_steps = 15
+pattern_num_evals = 1
+pattern_dropout = 0.1
 
-                        data_dict = {
-                                      "data_dir": data_dir,
-                                      "model_dir": model_dir,
-                                      "model_name": model_name,
-                                      "model_type": model_types[task_idx],
-                                      "batch_size": batch_sizes[os_idx],
-                                      "data_split_ratio": data_split_ratios[size_idx],
-                                      "logging_steps": 10,
-                                      "eval_steps": 78,
-                                      "num_evals": num_evals[size_idx],
-                                      "dropout": dropout
-                                    }
+classifier_batch_size = 2
+classifier_logging_steps = 10
+classifier_eval_steps = 1
+classifier_gradient_accumulation_steps = 2
+classifier_warmup_steps = 150
+classifier_num_evals = 10
+classifier_dropout = 0.1
 
-                        if not os.path.isdir(args_file_dir):
-                            os.makedirs(args_file_dir)
-                            print("creating dataset directory " + args_file_dir)
-                        with open(args_file_dir + args_file, 'w') as json_file:
-                            json.dump(data_dict, json_file, indent=4)
+
+for target_name, num_patterns, labels, label_dictionary in zip(target_names, num_patterns_list, labels_list, label_dictionary_list):
+
+    args_file_name = "/" + target_name + ".json"
+    pattern_model_dir = "model_outputs/" + target_name + "_pattern"
+    classifier_model_dir = "model_outputs/" + target_name
+    patterns = [target_name + "_pattern_" + str(idx) for idx in range(int(num_patterns))]
+    verbalizers = [target_name + "_verbalizer_" + str(idx) for idx in range(int(num_patterns))]
+
+    data_dict = {
+                  "data_file": data_file,
+                  "pattern_model_dir": pattern_model_dir,
+                  "classifier_model_dir": classifier_model_dir,
+                  "model_name": model_name,
+                  "model_type": model_type,
+                  "n_train_samples": n_train_samples,
+                  "n_dev_samples": n_dev_samples,
+                  "n_test_samples": n_test_samples,
+                  "target_column": target_name,
+                  "patterns": patterns,
+                  "verbalizers": verbalizers,
+                  "num_labels": num_labels,
+                  "labels": labels,
+                  "label_dictionary": label_dictionary,
+                  "pattern_batch_size": pattern_batch_size,
+                  "pattern_logging_steps": pattern_logging_steps,
+                  "pattern_eval_steps": pattern_eval_steps,
+                  "pattern_gradient_accumulation_steps": pattern_gradient_accumulation_steps,
+                  "pattern_warmup_steps": pattern_warmup_steps,
+                  "pattern_num_evals": pattern_num_evals,
+                  "pattern_dropout": pattern_dropout,
+                  "classifier_batch_size": classifier_batch_size,
+                  "classifier_logging_steps": classifier_logging_steps,
+                  "classifier_eval_steps": classifier_eval_steps,
+                  "classifier_gradient_accumulation_steps": classifier_gradient_accumulation_steps,
+                  "classifier_warmup_steps": classifier_warmup_steps,
+                  "classifier_num_evals": classifier_num_evals,
+                  "classifier_dropout": classifier_dropout,
+                }
+
+    if not os.path.isdir(args_file_dir):
+        os.makedirs(args_file_dir)
+        print("creating dataset directory " + args_file_dir)
+    with open(args_file_dir + args_file_name, 'w') as json_file:
+        json.dump(data_dict, json_file, indent=4)
