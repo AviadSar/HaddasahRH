@@ -4,7 +4,7 @@ import json
 
 args_file_dir = "args"
 data_file = "data/social_assesments_100_annotations_clean_filled_en.tsv"
-target_names = ["marital_status"]
+target_names = ["marital_status", "sex"]
 model_name = "roberta-base"
 model_type = "MLM"
 
@@ -12,13 +12,15 @@ n_train_samples = 30
 n_dev_samples = 30
 n_test_samples = 30
 
-num_patterns_list = [2]
-patterns = ["marital_status_pattern_1", "marital_status_pattern_2"]
-verbalizers = ["marital_status_verbalizer_1", "marital_status_verbalizer_2"]
+num_patterns_list = [3,
+                     4]
 
-num_labels = 2
-labels_list = [["married", "not_married"]]
-label_dictionary_list = [[["unknown", "not_married"], ["single", "not_married"], ["divorced", "not_married"], ["widowed", "not_married"]]]
+num_labels_list = [2,
+                   3]
+labels_list = [["married", "not_married"],
+               ["m", "f", "unknown"]]
+label_dictionary_list = [[["unknown", "not_married"], ["single", "not_married"], ["divorced", "not_married"], ["widowed", "not_married"]],
+                         []]
 
 pattern_batch_size = 1
 pattern_logging_steps = 15
@@ -37,13 +39,13 @@ classifier_num_evals = 10
 classifier_dropout = 0.1
 
 
-for target_name, num_patterns, labels, label_dictionary in zip(target_names, num_patterns_list, labels_list, label_dictionary_list):
+for target_name, num_patterns, num_labels, labels, label_dictionary in zip(target_names, num_patterns_list, num_labels_list, labels_list, label_dictionary_list):
 
     args_file_name = "/" + target_name + ".json"
     pattern_model_dir = "model_outputs/" + target_name + "_pattern"
     classifier_model_dir = "model_outputs/" + target_name
-    patterns = [target_name + "_pattern_" + str(idx) for idx in range(int(num_patterns))]
-    verbalizers = [target_name + "_verbalizer_" + str(idx) for idx in range(int(num_patterns))]
+    patterns = [target_name + "_pattern_" + str(idx) for idx in range(int(num_patterns) - 1)]
+    verbalizers = [target_name + "_verbalizer_" + str(idx) for idx in range(int(num_patterns) - 1)]
 
     data_dict = {
                   "data_file": data_file,
