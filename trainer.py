@@ -303,6 +303,7 @@ def soft_label_data(args):
     adjust_target_column((train, dev, test, data), args)
 
     pattern_probs = []
+    pattern_accuracies = []
     for pattern, verbalizer in zip(args.patterns, args.verbalizers):
         model.verbalizer, model.tokenizer, model.args = verbalizer, tokenizer, args
         apply_pattern_to_all_datasets(pattern, verbalizer, (train, dev, test, data), args)
@@ -316,8 +317,10 @@ def soft_label_data(args):
         evaluation = trainer.evaluate()
 
         pattern_probs.append(get_pattern_probs(evaluation, verbalizer, tokenizer, args))
+        pattern_accuracies.append(evaluation['eval_accuracy'])
 
-    data_target_probs = np.mean(np.array(pattern_probs), axis=0)
+    pattern_accuracies = np.array(pattern_accuracies) / sum(pattern_accuracies)
+    data_target_probs = np.average(np.array(pattern_probs), weights=pattern_accuracies, axis=0)
     data['text'], test['text'] = data['social_assessment'], test['social_assessment']
     data['target'], test['target'] = list(data_target_probs), test[args.target_column].apply(labels_to_classes(args))
 

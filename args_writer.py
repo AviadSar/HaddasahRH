@@ -113,8 +113,8 @@ for target_name, num_patterns, num_labels, labels, label_dictionary in zip(targe
     args_file_name = "/" + target_name + ".json"
     pattern_model_dir = "model_outputs/" + target_name + "_pattern"
     classifier_model_dir = "model_outputs/" + target_name
-    patterns = [target_name + "_pattern_" + str(idx) for idx in range(int(num_patterns) - 1)]
-    verbalizers = [target_name + "_verbalizer_" + str(idx) for idx in range(int(num_patterns) - 1)]
+    patterns = [target_name + "_pattern_" + str(idx) for idx in range(int(num_patterns))]
+    verbalizers = [target_name + "_verbalizer_" + str(idx) for idx in range(int(num_patterns))]
 
     data_dict = {
                   "data_file": data_file,
