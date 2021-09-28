@@ -4,7 +4,22 @@ import json
 
 args_file_dir = "args"
 data_file = "data/social_assesments_100_annotations_clean_filled_en.tsv"
-target_names = ["marital_status", "sex"]
+target_names = ["sex",
+                "immigrant",
+                "marital_status",
+                "children",
+                "closest_relative",
+                "closest_supporting_relative",
+                "help_at_home_hours",
+                "seeking_help_at_home",
+                "is_exhausted",
+                "needs_extreme_nursing",
+                "has_extreme_nursing",
+                "is_confused",
+                "is_dementic",
+                "residence",
+                "recommended_residence"]
+
 model_name = "roberta-base"
 model_type = "MLM"
 
@@ -12,14 +27,68 @@ n_train_samples = 30
 n_dev_samples = 30
 n_test_samples = 30
 
-num_patterns_list = [3,
-                     4]
+num_patterns_list = [4, #sex
+                     4, #immigrant
+                     3, #marital_status
+                     2, #children
+                     2, #closest_relative
+                     2, #closest_supporting_relative
+                     3, #help_at_home_hours
+                     3, #seeking_help_at_home
+                     3, #is_exhausted
+                     2, #needs_extreme_nursing
+                     2, #has_extreme_nursing
+                     3, #is_confused
+                     3, #is_dementic
+                     3, #residence
+                     3]
 
-num_labels_list = [2,
-                   3]
-labels_list = [["married", "not_married"],
-               ["m", "f", "unknown"]]
-label_dictionary_list = [[["unknown", "not_married"], ["single", "not_married"], ["divorced", "not_married"], ["widowed", "not_married"]],
+num_labels_list = [3, #sex
+                   2, #immigrant
+                   2, #marital_status
+                   3, #children
+                   3, #closest_relative
+                   3, #closest_supporting_relative
+                   4, #help_at_home_hours
+                   2, #seeking_help_at_home
+                   2, #is_exhausted
+                   2, #needs_extreme_nursing
+                   2, #has_extreme_nursing
+                   2, #is_confused
+                   2, #is_dementic
+                   2, #residence
+                   2]
+
+labels_list = [["m", "f", "unknown"],
+               ["yes", "no"],
+               ["married", "not_married"],
+               ["yes", "no", "unknown"],
+               ["at_home", "close", "far"],
+               ["at_home", "close", "far"],
+               ["no", "few", "many", "special"],
+               ["yes", "no"],
+               ["yes", "no"],
+               ["yes", "no"],
+               ["yes", "no"],
+               ["yes", "no"], #is_confused
+               ["yes", "no"],
+               ["home", "nursing_home"],
+               ["home", "nursing_home"]]
+
+label_dictionary_list = [[],
+                         [],
+                         [["unknown", "not_married"], ["single", "not_married"], ["divorced", "not_married"], ["widowed", "not_married"]],
+                         [],
+                         [["unknown", "far"]],
+                         [["unknown", "far"]],
+                         [],
+                         [],
+                         [],
+                         [],
+                         [],
+                         [], #is_confused
+                         [],
+                         [["family_member_home", "home"]],
                          []]
 
 pattern_batch_size = 1

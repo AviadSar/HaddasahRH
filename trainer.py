@@ -254,10 +254,20 @@ def apply_pattern_to_all_datasets(pattern, verbalizer, datasets, args):
         patterns.apply_pattern(pattern, verbalizer, dataset, args)
 
 
+def adjust_children(children):
+    if children.isdigit():
+        if int(children) > 0:
+            return 'yes'
+        else:
+            return 'no'
+
+
 def adjust_target_column(datasets, args):
     for dataset in datasets:
         for label_replacement in args.label_dictionary:
             dataset[args.target_column] = dataset[args.target_column].replace(label_replacement[0], label_replacement[1])
+        if args.target_column == 'children':
+            dataset[args.target_column] = dataset[args.target_column].apply(adjust_children)
 
 
 def get_pattern_probs(evaluation, verbalizer, tokenizer, args):

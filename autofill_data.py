@@ -15,13 +15,15 @@ def fill_empty_values(social_assessments):
     social_assessments['help_at_home_hours'][:fill_to_row].fillna(value=0, inplace=True)
     social_assessments['seeking_help_at_home'][:fill_to_row].fillna(value='no', inplace=True)
     social_assessments['is_holocaust_survivor'][:fill_to_row].fillna(value='no', inplace=True)
-    social_assessments['is_fatigued_(tashush)'][:fill_to_row].fillna(value='no', inplace=True)
-    social_assessments['needs_extreme_nursing_(siudi)'][:fill_to_row].fillna(value='no', inplace=True)
+    social_assessments['is_exhausted'][:fill_to_row].fillna(value='no', inplace=True)
+    social_assessments['needs_extreme_nursing'][:fill_to_row].fillna(value='no', inplace=True)
     social_assessments['has_extreme_nursing'][:fill_to_row].fillna(value='no', inplace=True)
     social_assessments['is_confused'][:fill_to_row].fillna(value='no', inplace=True)
     social_assessments['is_dementic'][:fill_to_row].fillna(value='no', inplace=True)
-    social_assessments['residence'][:fill_to_row].fillna(value='unknown', inplace=True)
-    social_assessments['recommeded_residence'][:fill_to_row].fillna(value='unknown', inplace=True)
+    social_assessments['residence'][:fill_to_row].fillna(value='home', inplace=True)
+    social_assessments['recommended_residence'][:fill_to_row].fillna(value='unknown', inplace=True)
+    social_assessments[social_assessments['recommended_residence'] == 'unknown']['recommended_residence'] =\
+        social_assessments[social_assessments['recommended_residence'] == 'unknown']['residence']
     social_assessments['is_owner'][:fill_to_row].fillna(value='unknown', inplace=True)
 
 
