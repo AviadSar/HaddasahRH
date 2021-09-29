@@ -1,11 +1,13 @@
 import pandas as pd
 import re
 
-# with open("data/social_assements_30_annotations.tsv", 'r') as data_file:
-#     df = pd.read_csv(data_file, sep='\t')
-#     events = df['event_identifier']
-#     uniq_events = set(events)
-#     print(len(events) - len(uniq_events))
+
+def event_identifier():
+    with open("data/social_assements_30_annotations.tsv", 'r') as data_file:
+        df = pd.read_csv(data_file, sep='\t')
+        events = df['event_identifier']
+        uniq_events = set(events)
+        print(len(events) - len(uniq_events))
 
 def pattern_and_verbalizer_getter_writer():
     with open('patterns.py', 'r') as pattern_file:
