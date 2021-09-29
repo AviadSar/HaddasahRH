@@ -91,17 +91,17 @@ label_dictionary_list = [[],
                          [["family_member_home", "home"]],
                          []]
 
-pattern_batch_size = 1
-pattern_logging_steps = 15
-pattern_eval_steps = 60
-pattern_gradient_accumulation_steps = 3
+pattern_batch_size = 6
+pattern_logging_steps = 1
+pattern_eval_steps = 1
+pattern_gradient_accumulation_steps = 5
 pattern_warmup_steps = 15
-pattern_num_evals = 1
+pattern_num_evals = 5
 pattern_dropout = 0.1
 
-classifier_batch_size = 2
+classifier_batch_size = 16
 classifier_logging_steps = 10
-classifier_eval_steps = 1
+classifier_eval_steps = 150
 classifier_gradient_accumulation_steps = 2
 classifier_warmup_steps = 150
 classifier_num_evals = 10

@@ -13,7 +13,6 @@ class verbalizer(object):
         for idx, label in enumerate(self.args.labels):
             if row[self.target_column] == label:
                 return target.replace('<mask>', self.label_tokens[idx])
-        raise ValueError('no such label "{}"'.format(row[self.target_column]))
 
 
 class recommended_residence_verbalizer_0(verbalizer):

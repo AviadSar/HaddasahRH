@@ -123,7 +123,7 @@ class compute_MLM_accuracy(object):
         return metric_dict
 
 
-class compute_MLM_accuracy_and_logits(object):
+class compute_MLM_logits(object):
     def __init__(self, verbalizer, tokenizer, args):
         self.verbalizer = verbalizer
         self.tokenizer = tokenizer
@@ -132,15 +132,8 @@ class compute_MLM_accuracy_and_logits(object):
     def __call__(self, eval_pred):
         logits, labels = eval_pred
 
-        class_token_idxs = [self.tokenizer.encode(self.verbalizer.classes[label])[1] for label in self.args.labels]
-        for idx, class_token_idx in enumerate(class_token_idxs):
-            labels[labels == class_token_idx] = idx
-
-        predictions = np.argmax(logits, axis=-1)
-        metric_dict = accuracy_metric.compute(predictions=predictions, references=labels[labels != -100])
-
         temperature = 2
-        metric_dict.update({'mask_probs': softmax(logits / temperature, axis=1)})
+        metric_dict = {'mask_probs': softmax(logits / temperature, axis=1)}
 
         return metric_dict
 
@@ -249,9 +242,11 @@ def set_trainer(model, train, eval, args, type='pattern'):
     return trainer
 
 
-def apply_pattern_to_all_datasets(pattern, verbalizer, datasets, args):
+def apply_pattern_to_all_datasets(pattern, verbalizer, datasets, input_only_datasets):
     for dataset in datasets:
-        patterns.apply_pattern(pattern, verbalizer, dataset, args)
+        patterns.apply_pattern(pattern, verbalizer, dataset)
+    for input_only_dataset in input_only_datasets:
+        patterns.apply_pattern(pattern, verbalizer, input_only_dataset, input_only=True)
 
 
 def adjust_children(children):
@@ -299,25 +294,28 @@ def soft_label_data(args):
     args.model_type = 'MLM'
     model, tokenizer = get_model_and_tokenizer(args)
     train, dev, test, data = load_data(args)
-    data = data[:10]
+    # data = data[:10]
     adjust_target_column((train, dev, test, data), args)
 
     pattern_probs = []
     pattern_accuracies = []
     for pattern, verbalizer in zip(args.patterns, args.verbalizers):
         model.verbalizer, model.tokenizer, model.args = verbalizer, tokenizer, args
-        apply_pattern_to_all_datasets(pattern, verbalizer, (train, dev, test, data), args)
-        tokenized_train, tokenized_dev, tokenized_test, tokenized_data = tokenize_datasets(tokenizer, (train, dev, test, data), args)
+        apply_pattern_to_all_datasets(pattern, verbalizer, [train, dev, test], [data])
+        tokenized_train, tokenized_dev, tokenized_test, tokenized_data = tokenize_datasets(tokenizer, [train, dev, test, data], args)
         trainer = set_trainer(model, tokenized_train, tokenized_dev, args, type='pattern')
         trainer.compute_metrics = compute_MLM_accuracy(verbalizer, tokenizer, args)
         trainer.train()
 
-        trainer.compute_metrics = compute_MLM_accuracy_and_logits(verbalizer, tokenizer, args)
+        evaluation = trainer.evaluate()
+        print(evaluation)
+        pattern_accuracies.append(evaluation['eval_accuracy'])
+
+        trainer.compute_metrics = compute_MLM_logits(verbalizer, tokenizer, args)
         trainer.eval_dataset = tokenized_data
         evaluation = trainer.evaluate()
-
+        print(evaluation)
         pattern_probs.append(get_pattern_probs(evaluation, verbalizer, tokenizer, args))
-        pattern_accuracies.append(evaluation['eval_accuracy'])
 
     pattern_accuracies = np.array(pattern_accuracies) / sum(pattern_accuracies)
     data_target_probs = np.average(np.array(pattern_probs), weights=pattern_accuracies, axis=0)

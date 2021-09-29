@@ -166,9 +166,12 @@ def sex_pattern_3(text):
     return text + " this person's gender is <mask>: "
 
 
-def apply_pattern(pattern, verbalizer, dataset, args):
+def apply_pattern(pattern, verbalizer, dataset, input_only=False):
     dataset['text'] = dataset['social_assessment'].apply(pattern)
-    dataset['target'] = dataset.apply(verbalizer, axis=1)
+    if input_only:
+        dataset['target'] = dataset['text']
+    else:
+        dataset['target'] = dataset.apply(verbalizer, axis=1)
 
 
 def get_pattern_from_string(pattern_string, args):
