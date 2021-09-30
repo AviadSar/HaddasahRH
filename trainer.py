@@ -263,6 +263,8 @@ def adjust_target_column(datasets, args):
             dataset[args.target_column] = dataset[args.target_column].replace(label_replacement[0], label_replacement[1])
         if args.target_column == 'children':
             dataset[args.target_column] = dataset[args.target_column].apply(adjust_children)
+        if args.target_column == 'help_at_home_hours':
+            dataset[args.target_column] = dataset[args.target_column].apply(adjust_children)
 
 
 def get_pattern_probs(evaluation, verbalizer, tokenizer, args):
