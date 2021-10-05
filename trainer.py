@@ -249,6 +249,18 @@ def apply_pattern_to_all_datasets(pattern, verbalizer, datasets, input_only_data
         patterns.apply_pattern(pattern, verbalizer, input_only_dataset, input_only=True)
 
 
+def adjust_help_at_home_hours(help_at_home_hours):
+    if help_at_home_hours.replace('.', '', 1).isdigit():
+        if float(help_at_home_hours) == 0:
+            return 'no'
+        elif float(help_at_home_hours) <= 20:
+            return 'few'
+        elif float(help_at_home_hours) < 100:
+            return 'many'
+        elif float(help_at_home_hours) == 100:
+            return 'all'
+
+
 def adjust_children(children):
     if children.isdigit():
         if int(children) > 0:
@@ -263,6 +275,8 @@ def adjust_target_column(datasets, args):
             dataset[args.target_column] = dataset[args.target_column].replace(label_replacement[0], label_replacement[1])
         if args.target_column == 'children':
             dataset[args.target_column] = dataset[args.target_column].apply(adjust_children)
+        if args.target_column == 'help_at_home_hours':
+            dataset[args.target_column] = dataset[args.target_column].apply(adjust_help_at_home_hours)
 
 
 def get_pattern_probs(evaluation, verbalizer, tokenizer, args):
