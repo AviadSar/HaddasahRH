@@ -22,14 +22,25 @@ def fill_empty_values(social_assessments):
     social_assessments['is_dementic'][:fill_to_row].fillna(value='no', inplace=True)
     social_assessments['residence'][:fill_to_row].fillna(value='home', inplace=True)
     social_assessments['recommended_residence'][:fill_to_row].fillna(value='unknown', inplace=True)
-    social_assessments[social_assessments['recommended_residence'] == 'unknown']['recommended_residence'] =\
-        social_assessments[social_assessments['recommended_residence'] == 'unknown']['residence']
+    social_assessments = social_assessments.apply(fill_recommended_residence, axis=1)
+    # social_assessments[social_assessments['recommended_residence'] == 'unknown']['recommended_residence'] =\
+    #     social_assessments[social_assessments['recommended_residence'] == 'unknown']['residence']
     social_assessments['is_owner'][:fill_to_row].fillna(value='unknown', inplace=True)
+
+    return social_assessments
+
+
+def fill_recommended_residence(row):
+    if row['recommended_residence'] == 'unknown':
+        row['recommended_residence'] = row['residence']
+        return row
+    else:
+        return row
 
 
 def autofill_data():
     social_assessments = pd.read_csv("data/social_assesments_100_annotations_clean_en.tsv", sep="\t")
-    fill_empty_values(social_assessments)
+    social_assessments = fill_empty_values(social_assessments)
     social_assessments.to_csv("data/social_assesments_100_annotations_clean_filled_en.tsv", sep="\t")
 
 
