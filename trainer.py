@@ -270,7 +270,7 @@ def adjust_children(children):
         else:
             return 'no'
     else:
-        return children
+        return 'unknown'
 
 
 def adjust_target_column(datasets, args):
