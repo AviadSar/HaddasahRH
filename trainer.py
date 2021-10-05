@@ -250,7 +250,7 @@ def apply_pattern_to_all_datasets(pattern, verbalizer, datasets, input_only_data
 
 
 def adjust_help_at_home_hours(help_at_home_hours):
-    if help_at_home_hours.replace('.', '', 1).isdigit():
+    if str(help_at_home_hours).replace('.', '', 1).isdigit():
         if float(help_at_home_hours) == 0:
             return 'no'
         elif float(help_at_home_hours) <= 20:
@@ -262,7 +262,7 @@ def adjust_help_at_home_hours(help_at_home_hours):
 
 
 def adjust_children(children):
-    if children.isdigit():
+    if str(children).isdigit():
         if int(children) > 0:
             return 'yes'
         else:
