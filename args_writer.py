@@ -96,7 +96,7 @@ pattern_logging_steps = 1
 pattern_eval_steps = 1
 pattern_gradient_accumulation_steps = 5
 pattern_warmup_steps = 15
-pattern_num_evals = 5
+pattern_num_evals = 25
 pattern_dropout = 0.1
 
 classifier_batch_size = 16

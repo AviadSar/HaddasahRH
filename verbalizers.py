@@ -162,12 +162,12 @@ class closest_relative_verbalizer_1(verbalizer):
 
 class children_verbalizer_0(verbalizer):
     def __init__(self, args):
-        super().__init__(args, ['yes', 'no'])
+        super().__init__(args, ['yes', 'no', 'maybe'])
 
 
 class children_verbalizer_1(verbalizer):
     def __init__(self, args):
-        super().__init__(args, ['yes', 'no'])
+        super().__init__(args, ['yes', 'no', 'maybe'])
 
 
 class marital_status_verbalizer_0(verbalizer):
@@ -182,7 +182,7 @@ class marital_status_verbalizer_1(verbalizer):
 
 class marital_status_verbalizer_2(verbalizer):
     def __init__(self, args):
-        super().__init__(args, ['yes', 'no'])
+        super().__init__(args, ['married', 'single'])
 
 
 class immigrant_verbalizer_0(verbalizer):

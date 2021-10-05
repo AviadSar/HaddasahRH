@@ -131,7 +131,7 @@ def marital_status_pattern_1(text):
 
 
 def marital_status_pattern_2(text):
-    return " this person is <mask>: " + text
+    return "this person is <mask>: " + text
 
 
 def immigrant_pattern_0(text):

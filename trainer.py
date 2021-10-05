@@ -199,7 +199,7 @@ def set_trainer(model, train, eval, args, type='pattern'):
         gradient_accumulation_steps = args.pattern_gradient_accumulation_steps
         num_evals = args.pattern_num_evals
         warmup_steps = args.pattern_warmup_steps
-        callbacks = [EvaluateCallback(), LoggingCallback()]
+        callbacks = [EvaluateAndSaveCallback(), LoggingCallback()]
     elif type == 'classifier':
         model_dir = args.classifier_model_dir
         batch_size = args.classifier_batch_size
@@ -308,6 +308,7 @@ def soft_label_data(args):
         trainer.train()
 
         evaluation = trainer.evaluate()
+        print("DEV")
         print(evaluation)
         pattern_accuracies.append(evaluation['eval_accuracy'])
 
