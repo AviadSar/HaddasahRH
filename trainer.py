@@ -258,15 +258,19 @@ def adjust_help_at_home_hours(help_at_home_hours):
         elif float(help_at_home_hours) < 100:
             return 'many'
         elif float(help_at_home_hours) == 100:
-            return 'all'
+            return 'special'
+    else:
+        return help_at_home_hours
 
 
 def adjust_children(children):
-    if str(children).isdigit():
+    if str(children).replace('.', '', 1).isdigit():
         if int(children) > 0:
             return 'yes'
         else:
             return 'no'
+    else:
+        return children
 
 
 def adjust_target_column(datasets, args):

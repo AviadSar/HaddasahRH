@@ -16,5 +16,5 @@ if __name__ == '__main__':
     # os.system("python3 trainer.py --json_file " + "args/has_extreme_nursing.json")
     # os.system("python3 trainer.py --json_file " + "args/is_confused.json")
     # os.system("python3 trainer.py --json_file " + "args/is_dementic.json")
-    os.system("python3 trainer.py --json_file " + "args/residence.json")
-    os.system("python3 trainer.py --json_file " + "args/recommended_residence.json")
+    # os.system("python3 trainer.py --json_file " + "args/residence.json")
+    # os.system("python3 trainer.py --json_file " + "args/recommended_residence.json")
