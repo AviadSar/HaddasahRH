@@ -265,7 +265,7 @@ def adjust_help_at_home_hours(help_at_home_hours):
 
 def adjust_children(children):
     if str(children).replace('.', '', 1).isdigit():
-        if int(children) > 0:
+        if float(children) > 0:
             return 'yes'
         else:
             return 'no'

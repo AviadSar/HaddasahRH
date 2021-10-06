@@ -89,7 +89,7 @@ label_dictionary_list = [[],
                          [], #is_confused
                          [],
                          [["family_member_home", "home"]],
-                         []]
+                         [["family_member_home", "home"]]]
 
 pattern_batch_size = 6
 pattern_logging_steps = 1
