@@ -1,5 +1,9 @@
 import pandas as pd
 import re
+import os
+import os.path
+import json
+import numpy as np
 
 
 def event_identifier():
@@ -8,6 +12,7 @@ def event_identifier():
         events = df['event_identifier']
         uniq_events = set(events)
         print(len(events) - len(uniq_events))
+
 
 def pattern_and_verbalizer_getter_writer():
     with open('patterns.py', 'r') as pattern_file:
@@ -32,4 +37,25 @@ def pattern_and_verbalizer_getter_writer():
             with open('tools_dump_file.txt', 'w') as file:
                 file.write(string)
 
-pattern_and_verbalizer_getter_writer()
+
+def results_getter():
+    files = []
+    for dirpath, dirnames, filenames in os.walk("."):
+        for filename in [f for f in filenames if f == 'log.json']:
+            files.append(os.path.join(dirpath, filename))
+
+    results = []
+    for file in files:
+        with open(file, 'r') as json_file:
+            json_data = json.load(json_file)
+            if 'eval_accuracy' in json_data:
+                results.append(json_data['eval_accuracy'][-1])
+
+    for file, result in zip(files, results):
+        print(file + ': ' + str(result))
+
+    print('average score is: ' + str(np.mean(results)))
+
+
+# pattern_and_verbalizer_getter_writer()
+results_getter()
